@@ -28,13 +28,20 @@ class AlterraScraper(BaseScraper):
         super().__init__()
         self._explicit_category_paths = category_paths
         self._pagination_blocked = False
+        # путь подкатегории -> "Раздел / Подкатегория" из меню сайта
+        self._category_names: dict[str, str] = {}
 
-    def _discover_category_paths(self) -> list[str]:
-        response = self._get(f"{self.base_url}/")
-        soup = BeautifulSoup(response.text, "lxml")
+    @staticmethod
+    def parse_menu(soup: BeautifulSoup) -> dict[str, str]:
+        """Пути подкатегорий и их названия из меню каталога.
 
-        paths: list[str] = []
-        seen: set[str] = set()
+        Название берём из текста ссылки в меню, а не из <h1> страницы: у большинства
+        страниц подкатегорий на этом сайте заголовка нет, а у остальных <h1> — это
+        заголовок SEO-статьи ("Арматура, круг, квадрат: виды, характеристики...").
+        Раздел-родитель сохраняем ("Инструмент / Топоры"): по нему отличаем товар,
+        который продаётся штуками, от весового.
+        """
+        names: dict[str, str] = {}
         for item in soup.select("li.catalog-nav__item"):
             top_link = item.select_one("a.catalog-nav__item-link")
             if not top_link:
@@ -42,14 +49,19 @@ class AlterraScraper(BaseScraper):
             top_href = top_link.get("href", "")
             if not top_href or any(part in top_href for part in EXCLUDED_TOP_HREF_PARTS):
                 continue
+            top_name = top_link.get_text(" ", strip=True)
 
             for a in item.select("ul.drop-nav__list a[href]"):
                 href = a.get("href", "")
-                if href and href not in seen:
-                    seen.add(href)
-                    paths.append(href)
+                sub_name = a.get_text(" ", strip=True)
+                if href and href not in names:
+                    names[href] = f"{top_name} / {sub_name}" if top_name and sub_name else (sub_name or top_name or href)
+        return names
 
-        return paths
+    def _discover_category_paths(self) -> list[str]:
+        response = self._get(f"{self.base_url}/")
+        self._category_names = self.parse_menu(BeautifulSoup(response.text, "lxml"))
+        return list(self._category_names)
 
     def fetch_products(self) -> list[ProductRecord]:
         category_paths = self._explicit_category_paths or self._discover_category_paths()
@@ -73,7 +85,8 @@ class AlterraScraper(BaseScraper):
     def _fetch_category(self, path: str) -> list[ProductRecord]:
         base = urljoin(self.base_url, path)
         products: list[ProductRecord] = []
-        category_name: str | None = None
+        # Имя из меню; для путей, переданных вручную (без обхода меню), — <h1> страницы или путь
+        category_name: str | None = self._category_names.get(path)
         seen_urls: set[str] = set()
 
         for page in range(1, MAX_PAGES_PER_CATEGORY + 1):

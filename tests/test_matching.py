@@ -112,6 +112,15 @@ class TestPack(unittest.TestCase):
         pack = derive_pack(name, extract_dimensions(name), "Строительные материалы")
         self.assertEqual((pack.value, pack.unit), (50, "кг"))
 
+    def test_mixed_section_is_judged_by_subcategory(self):
+        # Раздел Алтерры "Инструменты, хозтовары, крепеж" содержит и топоры, и гвозди на вес
+        name = "Гвозди строительные 3,0х80 1кг"
+        nails = derive_pack(name, extract_dimensions(name), "Инструменты, хозтовары, крепеж / Гвозди")
+        self.assertEqual((nails.value, nails.unit), (1, "кг"))
+        axe = "Колун Сибин, деревянная рукоятка, 3 кг"
+        self.assertIsNone(derive_pack(axe, extract_dimensions(axe),
+                                      "Инструменты, хозтовары, крепеж / Слесарно-столярный инструмент"))
+
     def test_unit_price(self):
         self.assertEqual(unit_price(580, extract_pack("Цемент 50кг")), 11.6)
         self.assertEqual(unit_price(154, extract_pack("Цементная смесь 2 кг")), 77.0)

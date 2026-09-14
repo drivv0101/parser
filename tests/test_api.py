@@ -254,6 +254,13 @@ class TestScrapeSchedule(unittest.TestCase):
         finally:
             session.close()
 
+    def test_display_category(self):
+        self.assertEqual(api._display_category("Инструменты, хозтовары, крепеж / Гвозди"), "Гвозди")
+        self.assertEqual(api._display_category("Строительные материалы"), "Строительные материалы")
+        self.assertIsNone(api._display_category("/catalog/gvozdi_1/"))
+        self.assertIsNone(api._display_category("Арматура, круг, квадрат: виды, характеристики и применение"))
+        self.assertIsNone(api._display_category(None))
+
     def test_health(self):
         data = api.health()
         self.assertEqual(data["status"], "ok")

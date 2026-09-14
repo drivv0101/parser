@@ -185,10 +185,21 @@ def extract_pack(text: str) -> Pack | None:
 # не говорит. Инструмент и инвентарь продаются поштучно, поэтому фасовку из их
 # названий не извлекаем вовсе.
 _UNIT_LESS_CATEGORY_RE = re.compile(r"инструмент|instrument|инвентар", re.IGNORECASE)
+# Раздел вроде "Инструменты, хозтовары, крепеж" — смешанный: гвозди и саморезы в нём
+# продаются килограммами. Такой сегмент сам по себе ничего не решает.
+_MIXED_SECTION_RE = re.compile(r"крепеж|крепёж|хозтовар|стройматериал", re.IGNORECASE)
 
 
 def category_sold_by_piece(category: str | None) -> bool:
-    return bool(category and _UNIT_LESS_CATEGORY_RE.search(category))
+    """Категория вида "Раздел / Подкатегория": решает любой сегмент, который про
+    инструмент и при этом не смешанный. "Инструменты, хозтовары, крепеж / Гвозди" -> нет,
+    "Инструменты, хозтовары, крепеж / Слесарно-столярный инструмент" -> да."""
+    if not category:
+        return False
+    for segment in re.split(r"\s*/\s*", category):
+        if _UNIT_LESS_CATEGORY_RE.search(segment) and not _MIXED_SECTION_RE.search(segment):
+            return True
+    return False
 
 
 def _looks_like_sheet(dims: Dimensions) -> bool:

@@ -240,6 +240,21 @@ def _effective_price(price: float, store_slug: str, discounts: dict[str, float])
     return round(price * (1 - percent / 100), 2)
 
 
+MAX_CATEGORY_DISPLAY_LEN = 50
+
+
+def _display_category(category: str | None) -> str | None:
+    """Категория для карточки товара. Путь ("/catalog/gvozdi_1/") и заголовок SEO-статьи
+    ("Арматура, круг, квадрат: виды, характеристики и применение") пользователю не нужны."""
+    if not category:
+        return None
+    # "Раздел / Подкатегория" — показываем только подкатегорию, она конкретнее и короче
+    category = category.strip().rsplit(" / ", 1)[-1].strip()
+    if not category or category.startswith("/") or len(category) > MAX_CATEGORY_DISPLAY_LEN or ":" in category:
+        return None
+    return category
+
+
 def _product_to_dict(product: Product, discounts: dict[str, float]) -> dict:
     discount_percent = discounts.get(product.store.slug, 0)
     effective = _effective_price(product.price, product.store.slug, discounts)
@@ -254,7 +269,7 @@ def _product_to_dict(product: Product, discounts: dict[str, float]) -> dict:
         "discount_percent": discount_percent,
         "effective_price": effective,
         "unit": product.unit,
-        "category": product.category,
+        "category": _display_category(product.category),
         "url": product.url,
         "dimensions": format_dimensions(product.length_mm, product.width_mm, product.thickness_mm),
         "pack": f"{product.pack_value:g} {product.pack_unit}" if product.pack_value and product.pack_unit else None,
