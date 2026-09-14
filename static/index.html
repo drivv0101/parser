@@ -54,6 +54,11 @@
   a:hover { filter: brightness(0.85); text-decoration: underline; }
   .wrap { max-width: 880px; margin: 0 auto; padding: 56px 24px; display: flex; flex-direction: column; gap: 26px; }
   .top-row { display: flex; align-items: center; gap: 10px; }
+  /* Логотип и название — ссылка на главную: щелчок перезагружает страницу и сбрасывает поиск */
+  .brand { display: flex; align-items: center; gap: 10px; color: inherit; text-decoration: none; border-radius: 10px; }
+  .brand:hover { text-decoration: none; filter: none; }
+  .brand:hover .logo-badge { filter: brightness(0.92); }
+  .brand:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
   .logo-badge { width: 34px; height: 34px; border-radius: 9px; background: var(--accent); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
   .logo-badge span { color: var(--accent-contrast); font-weight: 800; font-size: 17px; }
   .wordmark { font-weight: 800; font-size: 21px; letter-spacing: -0.01em; }
@@ -160,8 +165,10 @@
   <div class="wrap">
     <div style="display:flex; flex-direction:column; gap:10px;">
       <div class="top-row">
-        <div class="logo-badge"><span class="heading">С</span></div>
-        <span class="heading wordmark">Стройцены</span>
+        <a href="/" class="brand" title="На главную">
+          <div class="logo-badge"><span class="heading">С</span></div>
+          <span class="heading wordmark">Стройцены</span>
+        </a>
         <span class="pill-tag">БИЙСК</span>
         <div style="margin-left:auto; display:flex; gap:8px; position:relative;">
           <button class="theme-toggle" id="discountsToggle" title="Мои скидочные карты" aria-label="Мои скидочные карты">
