@@ -47,13 +47,40 @@ logger = get_logger("main")
 scheduler = BackgroundScheduler()
 
 
+def scrape_is_due(session: Session, interval_hours: int, now: datetime | None = None) -> bool:
+    """База пуста или старше интервала обновления — обход нужен прямо сейчас, а не через
+    interval_hours после старта. Иначе свежий сервер полдня работает без данных, а после
+    каждого перезапуска отсчёт начинается заново."""
+    now = now or datetime.now(UTC).replace(tzinfo=None)
+    stores = session.query(Store).all()
+    if len(stores) < len(SCRAPERS):
+        return True
+    for store in stores:
+        if store.last_scraped_at is None:
+            return True
+        if (now - store.last_scraped_at).total_seconds() >= interval_hours * 3600:
+            return True
+    return False
+
+
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     init_db()
     if AUTO_SCRAPE_ENABLED:
-        scheduler.add_job(run_all, "interval", hours=SCRAPE_INTERVAL_HOURS, id="scrape_all")
+        session = get_session()
+        try:
+            due = scrape_is_due(session, SCRAPE_INTERVAL_HOURS)
+        finally:
+            session.close()
+        # next_run_time=None у APScheduler означает "задача на паузе", поэтому параметр
+        # передаём только когда обход нужен сразу; иначе первый запуск — через интервал.
+        extra = {"next_run_time": datetime.now()} if due else {}
+        scheduler.add_job(run_all, "interval", hours=SCRAPE_INTERVAL_HOURS, id="scrape_all", **extra)
         scheduler.start()
-        logger.info("Приложение запущено, фоновое обновление каждые %d ч.", SCRAPE_INTERVAL_HOURS)
+        logger.info(
+            "Приложение запущено, фоновое обновление каждые %d ч.%s",
+            SCRAPE_INTERVAL_HOURS, " Данные устарели — обход начинается сразу." if due else "",
+        )
     else:
         logger.info("Приложение запущено, автообновление ВЫКЛЮЧЕНО (STROY_AUTO_SCRAPE=0)")
     yield
@@ -90,6 +117,17 @@ def _utc_iso(value: datetime | None) -> str | None:
 @app.get("/")
 def index() -> FileResponse:
     return FileResponse(STATIC_DIR / "index.html")
+
+
+@app.get("/api/health")
+def health() -> dict:
+    """Для healthcheck в Docker/хостинге: приложение живо и база открывается."""
+    session = get_session()
+    try:
+        active = session.query(Product).filter(Product.is_active.is_(True)).count()
+        return {"status": "ok", "active_products": active, "auto_scrape": AUTO_SCRAPE_ENABLED}
+    finally:
+        session.close()
 
 
 @app.get("/api/stores")

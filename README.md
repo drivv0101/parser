@@ -36,16 +36,67 @@ python -m unittest discover -s tests -t .
 | `STROY_AUTO_SCRAPE` | `1` | `0` выключает фоновое обновление (удобно на время отладки) |
 | `STROY_SCRAPE_INTERVAL_HOURS` | `12` | Период фонового обновления |
 | `STROY_ADMIN_TOKEN` | не задан | Токен для `POST /api/refresh/{slug}`. Без него эндпоинт доступен только с localhost |
-| `STROY_DB_PATH` | `prices.db` рядом с проектом | Путь к базе (используется тестами) |
+| `STROY_DB_PATH` | `prices.db` рядом с проектом | Путь к базе (используется тестами и Docker) |
+| `STROY_LOG_TO_FILE` | `1` | `0` — писать лог только в консоль (в Docker логи читаются через `docker logs`) |
 
 Пока сервер запущен, встроенный планировщик (APScheduler) обновляет цены каждые
-`STROY_SCRAPE_INTERVAL_HOURS` часов. Первый прогон — через этот же интервал после старта,
-поэтому свежую базу нужно один раз собрать вручную (`run_scrape --all`).
+`STROY_SCRAPE_INTERVAL_HOURS` часов. Если при старте база пуста или старше интервала,
+обход начинается сразу — свежий сервер не ждёт полдня без данных.
 
 **Про несколько воркеров:** планировщик живёт внутри процесса приложения, поэтому запускать
 uvicorn с `--workers N` нельзя — обход стартанёт N раз одновременно. Для нескольких воркеров
 выносите обновление в отдельный процесс (`run_scrape --all` по cron / планировщику задач)
 и ставьте `STROY_AUTO_SCRAPE=0`.
+
+## Деплой на сервер (Docker)
+
+Локальный запуск живёт, пока включён компьютер. Чтобы приложение работало само по себе,
+нужен сервер, который не выключается — самый простой вариант для этого проекта: минимальный
+VPS с Ubuntu (1 vCPU, 1 ГБ памяти; у российских провайдеров — Timeweb Cloud, Selectel, Beget —
+это ~200–400 ₽/мес). Российский хостинг предпочтительнее не только из-за оплаты: сайты магазинов
+российские, и обход с зарубежного IP может оказаться медленнее или заблокирован.
+
+На свежем сервере (Ubuntu 22.04/24.04, под root):
+
+```bash
+# 1. Docker и git
+curl -fsSL https://get.docker.com | sh
+apt-get install -y git
+
+# 2. Код
+git clone https://github.com/drivv0101/parser.git stroy-parser
+cd stroy-parser
+
+# 3. Секреты: токен для ручного обновления и домен (если есть)
+cp .env.example .env
+python3 -c "import secrets; print(secrets.token_urlsafe(32))"   # вставить в STROY_ADMIN_TOKEN
+nano .env
+
+# 4. Запуск
+docker compose up -d --build
+docker compose logs -f web    # первый обход магазинов начнётся сразу, ~1,5-2 часа
+```
+
+После этого сайт открывается по адресу `http://<IP сервера>`. Если в `.env` задан домен
+(`SITE_ADDRESS=stroyceny.example.ru`, A-запись указывает на сервер), Caddy сам выпустит
+и будет продлевать HTTPS-сертификат.
+
+Что происходит внутри: контейнер `web` — приложение с планировщиком обхода, база лежит на
+томе `stroy-data` и переживает пересборки; контейнер `caddy` — обратный прокси, единственный,
+у кого открыты порты наружу. Порт 8000 приложения снаружи недоступен.
+
+Полезное:
+
+```bash
+docker compose logs -f web                              # что делает приложение
+docker compose exec web python -m app.run_scrape --all  # обход вручную
+git pull && docker compose up -d --build                # обновить после правок
+docker compose cp web:/srv/data/prices.db ./prices-$(date +%F).db   # бэкап базы
+docker compose cp ./prices.db web:/srv/data/prices.db && docker compose restart web  # залить базу с компьютера
+```
+
+Ручной запуск обхода через API на сервере требует токена:
+`curl -X POST -H "X-Admin-Token: <токен>" http://<IP>/api/refresh/stroymir`.
 
 ## Подключённые магазины
 

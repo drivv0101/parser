@@ -1,0 +1,17 @@
+.git
+.gitignore
+prices.db
+prices.db-wal
+prices.db-shm
+*.db
+*.backup
+logs/
+tests/
+__pycache__/
+**/__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env
+PORTFOLIO_CASE.md
+README.md

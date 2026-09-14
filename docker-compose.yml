@@ -1,0 +1,36 @@
+services:
+  web:
+    build: .
+    restart: unless-stopped
+    environment:
+      # Токен для ручного запуска обхода (POST /api/refresh/{slug}). На сервере обязателен:
+      # без него эндпоинт доступен только с localhost, а localhost внутри контейнера — это никто.
+      STROY_ADMIN_TOKEN: ${STROY_ADMIN_TOKEN:?задайте STROY_ADMIN_TOKEN в файле .env}
+      STROY_SCRAPE_INTERVAL_HOURS: ${STROY_SCRAPE_INTERVAL_HOURS:-12}
+    volumes:
+      - stroy-data:/srv/data
+    # Наружу порт не публикуем — доступ только через caddy
+    expose:
+      - "8000"
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      # Без домена: ":80" — сайт по IP сервера, обычный http.
+      # С доменом: "stroyceny.example.ru" — Caddy сам получит и будет продлевать HTTPS-сертификат.
+      SITE_ADDRESS: ${SITE_ADDRESS:-:80}
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      - web
+
+volumes:
+  stroy-data:
+  caddy-data:
+  caddy-config:

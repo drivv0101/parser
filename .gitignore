@@ -9,6 +9,9 @@ prices.db-shm
 
 logs/
 
+# Секреты деплоя (шаблон — .env.example)
+.env
+
 __pycache__/
 *.py[cod]
 .venv/

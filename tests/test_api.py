@@ -8,7 +8,7 @@ HTTP-клиент ради тестов.
 import os
 import tempfile
 import unittest
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 _TMP_DB = os.path.join(tempfile.mkdtemp(prefix="stroy-test-"), "test.db")
 os.environ["STROY_DB_PATH"] = _TMP_DB
@@ -227,6 +227,36 @@ class TestEstimate(unittest.TestCase):
         self.assertFalse(stroymir["complete"])
         self.assertEqual(stroymir["missing"], ["дсп"])
         self.assertGreaterEqual(data["optimal_total"], 0)
+
+
+class TestScrapeSchedule(unittest.TestCase):
+    def test_fresh_data_is_not_due(self):
+        session = get_session()
+        try:
+            for store in session.query(Store).all():
+                store.last_scraped_at = NOW
+            session.commit()
+            self.assertFalse(api.scrape_is_due(session, 12, now=NOW + timedelta(hours=1)))
+            self.assertTrue(api.scrape_is_due(session, 12, now=NOW + timedelta(hours=12)))
+        finally:
+            session.close()
+
+    def test_never_scraped_store_is_due(self):
+        session = get_session()
+        try:
+            store = session.query(Store).filter_by(slug="alterra").one()
+            store.last_scraped_at = None
+            session.commit()
+            self.assertTrue(api.scrape_is_due(session, 12, now=NOW))
+            store.last_scraped_at = NOW
+            session.commit()
+        finally:
+            session.close()
+
+    def test_health(self):
+        data = api.health()
+        self.assertEqual(data["status"], "ok")
+        self.assertGreater(data["active_products"], 0)
 
 
 class TestParseLines(unittest.TestCase):
