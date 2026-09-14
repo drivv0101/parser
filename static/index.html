@@ -213,7 +213,7 @@
       <div id="estimateResults" style="margin-top:20px; display:flex; flex-direction:column; gap:20px;"></div>
     </div>
 
-    <div class="footer-note">Цены собираются автоматически из строительных магазинов Бийска и обновляются в фоне.</div>
+    <div class="footer-note">Цены собираются автоматически из строительных магазинов Бийска и обновляются в фоне.<span id="storeFreshness"></span></div>
   </div>
 
 <script>
@@ -306,8 +306,19 @@ const storesReady = fetch('/api/stores')
   .then(list => {
     knownStores = Array.isArray(list) ? list : [];
     migrateDiscountsToSlugs(knownStores);
+    renderStoreFreshness(knownStores);
     return knownStores;
   });
+
+// Свежесть данных видна всегда, а не только в мета-строке после поиска:
+// "Строймир — 14 сентября, 22:18 · ТГ-Алтерра — 9 сентября, 19:01".
+function renderStoreFreshness(stores) {
+  const el = document.getElementById('storeFreshness');
+  if (!el || !stores.length) return;
+  // textContent — экранирование не нужно, иначе "&" в названии показался бы как "&amp;"
+  const parts = stores.map(s => `${s.name} — ${s.last_scraped_at ? formatDate(s.last_scraped_at) : 'ещё не собирался'}`);
+  el.textContent = ' Последнее обновление: ' + parts.join(' · ') + '.';
+}
 
 function migrateDiscountsToSlugs(stores) {
   const slugs = new Set(stores.map(s => s.slug));
