@@ -143,6 +143,10 @@
   .discount-row span { font-size: 13px; color: var(--text); }
   .discount-row input { width: 56px; text-align: right; padding: 6px 8px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg); color: var(--text); font-family: inherit; font-size: 13px; }
   .discount-badge { font-size: 11px; font-weight: 700; color: var(--accent-tint-text); background: var(--accent-tint-bg); padding: 2px 7px; border-radius: 100px; }
+  .discount-row span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .discount-remove { width: 24px; height: 24px; flex-shrink: 0; border: 1px solid var(--border); border-radius: 7px; background: var(--surface); color: var(--muted-2); cursor: pointer; font-size: 14px; line-height: 1; padding: 0; }
+  .discount-remove:hover { border-color: var(--accent); color: var(--accent); }
+  .discount-remove[hidden] { display: none; }
   input[type="number"] { -moz-appearance: textfield; }
   input[type="number"]::-webkit-outer-spin-button,
   input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
@@ -325,16 +329,21 @@ async function renderDiscountsPanel() {
 
   // магазины, добавленные вручную (например, скидка есть, а магазин ещё не подключён к парсеру)
   const entries = [
-    ...stores.map(s => ({ key: s.slug, label: s.name })),
-    ...customStores.map(name => ({ key: name, label: name })),
+    ...stores.map(s => ({ key: s.slug, label: s.name, custom: false })),
+    ...customStores.map(name => ({ key: name, label: name, custom: true })),
   ];
   const allNames = entries.map(e => e.label);
 
-  const rows = entries.map(({ key, label }) => {
+  const rows = entries.map(({ key, label, custom }) => {
     const value = discountsMap[key] ?? '';
+    // Магазин, добавленный вручную, удаляется целиком; у подключённого к парсеру
+    // удалять нечего — можно только убрать скидку, и кнопка появляется, если она задана.
+    const title = custom ? 'Удалить магазин' : 'Убрать скидку';
     return `<div class="discount-row">
-      <span>${escapeHtml(label)}</span>
+      <span title="${escapeHtml(label)}">${escapeHtml(label)}</span>
       <input type="number" min="0" max="90" step="1" data-store="${escapeHtml(key)}" value="${escapeHtml(value)}" placeholder="0">
+      <button type="button" class="discount-remove" data-remove-store="${escapeHtml(key)}" data-custom="${custom ? '1' : ''}"
+        title="${title}" aria-label="${title}"${custom || value !== '' ? '' : ' hidden'}>×</button>
     </div>`;
   }).join('');
 
@@ -350,6 +359,11 @@ async function renderDiscountsPanel() {
     <button id="applyDiscountsBtn" class="apply-discounts-btn">Применить</button>`;
 
   panel.querySelectorAll('input[data-store]').forEach(inp => {
+    inp.addEventListener('input', () => {
+      // Кнопка "убрать скидку" нужна только когда скидка действительно есть
+      const btn = inp.parentElement.querySelector('.discount-remove');
+      if (btn && !btn.dataset.custom) btn.hidden = inp.value.trim() === '';
+    });
     inp.addEventListener('change', () => {
       const percent = parseFloat(inp.value);
       const store = inp.dataset.store;
@@ -359,6 +373,25 @@ async function renderDiscountsPanel() {
         discountsMap[store] = Math.min(percent, 90);
       }
       saveDiscounts(discountsMap);
+    });
+  });
+
+  panel.querySelectorAll('.discount-remove').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const key = btn.dataset.removeStore;
+      const hadDiscount = discountsMap[key] !== undefined;
+      delete discountsMap[key];
+      if (btn.dataset.custom) {
+        customStores = customStores.filter(name => name !== key);
+        saveCustomStores(customStores);
+      }
+      saveDiscounts(discountsMap);
+      renderDiscountsPanel();
+      // Цены в выдаче и в смете считались с этой скидкой — пересчитываем
+      if (hadDiscount) {
+        if (input.value.trim()) search();
+        if (estimateList.length) calcEstimate();
+      }
     });
   });
 
