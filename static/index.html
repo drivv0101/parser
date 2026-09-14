@@ -1,0 +1,925 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Стройцены Бийск</title>
+<script>
+  // Применяем тему синхронно до отрисовки, чтобы не было мигания светлой темы
+  (function () {
+    var stored = localStorage.getItem('stroyceny-theme');
+    var theme = stored === 'light' || stored === 'dark'
+      ? stored
+      : (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    document.documentElement.setAttribute('data-theme', theme);
+  })();
+</script>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;700;800&family=Public+Sans:wght@400;500;600;700&display=swap">
+<style>
+  :root {
+    --bg: #FAF7F3;
+    --surface: #FFFFFF;
+    --border: #E8E1D8;
+    --row-border: #EEE8DF;
+    --text: #23201B;
+    --muted: #746C60;
+    --muted-2: #A79C8C;
+    --chip-bg: #F1ECE4;
+    --accent: #C2611F;
+    --accent-contrast: #FFFFFF;
+    --accent-tint-bg: #FBEADB;
+    --accent-tint-text: #8A4212;
+    --shadow: 0 1px 2px rgba(35,32,27,0.04), 0 8px 24px rgba(35,32,27,0.04);
+  }
+  :root[data-theme="dark"] {
+    --bg: #1B1815;
+    --surface: #242019;
+    --border: #3A342C;
+    --row-border: #322D24;
+    --text: #F3EFE9;
+    --muted: #A79C8C;
+    --muted-2: #8A7F70;
+    --chip-bg: #2D281F;
+    --accent: #E38B4D;
+    --accent-contrast: #1B1815;
+    --accent-tint-bg: #3C2A18;
+    --accent-tint-text: #F3C79A;
+    --shadow: 0 1px 2px rgba(0,0,0,0.2), 0 8px 24px rgba(0,0,0,0.24);
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font-family: 'Public Sans', ui-sans-serif, system-ui, sans-serif; }
+  .heading { font-family: 'Manrope', ui-sans-serif, system-ui, sans-serif; }
+  .num { font-variant-numeric: tabular-nums; }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { filter: brightness(0.85); text-decoration: underline; }
+  .wrap { max-width: 880px; margin: 0 auto; padding: 56px 24px; display: flex; flex-direction: column; gap: 26px; }
+  .top-row { display: flex; align-items: center; gap: 10px; }
+  .logo-badge { width: 34px; height: 34px; border-radius: 9px; background: var(--accent); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .logo-badge span { color: var(--accent-contrast); font-weight: 800; font-size: 17px; }
+  .wordmark { font-weight: 800; font-size: 21px; letter-spacing: -0.01em; }
+  .pill-tag { font-size: 11px; font-weight: 700; letter-spacing: 0.06em; color: var(--muted); background: var(--chip-bg); padding: 4px 9px; border-radius: 100px; }
+  .theme-toggle { margin-left: auto; width: 38px; height: 38px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface); display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--text); }
+  .theme-toggle:hover { border-color: var(--accent); }
+  .subtitle { font-size: 15px; line-height: 1.5; color: var(--muted); max-width: 520px; }
+  .search-row { display: flex; gap: 10px; align-items: stretch; }
+  .search-input-wrap { flex: 1; display: flex; align-items: center; gap: 10px; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 0 18px; height: 56px; }
+  .search-input-wrap svg { flex-shrink: 0; }
+  #q { flex: 1; border: none; outline: none; background: transparent; font-size: 16px; color: var(--text); font-family: inherit; }
+  #q::placeholder { color: var(--muted-2); }
+  #go { background: var(--accent); color: var(--accent-contrast); border: none; border-radius: 14px; height: 56px; padding: 0 30px; font-weight: 700; font-size: 16px; flex-shrink: 0; cursor: pointer; font-family: 'Manrope', inherit; }
+  #go:hover { filter: brightness(0.92); }
+  .meta-line { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted-2); min-height: 18px; }
+  .results-card { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; box-shadow: var(--shadow); overflow: hidden; }
+  .row { display: flex; align-items: center; gap: 20px; padding: 20px 24px; border-bottom: 1px solid var(--row-border); }
+  .row:last-child { border-bottom: none; }
+  .row.best { background: var(--accent-tint-bg); }
+  .price-block { min-width: 118px; display: flex; flex-direction: column; gap: 4px; }
+  .price { font-weight: 800; font-size: 24px; }
+  .best-badge { align-self: flex-start; font-size: 11px; font-weight: 700; color: var(--accent-tint-text); background: rgba(0,0,0,0.06); padding: 3px 8px; border-radius: 100px; }
+  :root[data-theme="dark"] .best-badge { background: rgba(255,255,255,0.08); }
+  .mid-block { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+  .name-link { font-weight: 600; font-size: 15px; color: var(--text); overflow-wrap: anywhere; }
+  .chip-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .chip { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: var(--muted); background: var(--chip-bg); padding: 4px 10px; border-radius: 100px; }
+  .store-dot { width: 14px; height: 14px; border-radius: 4px; color: #fff; font-size: 9px; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .cta { flex-shrink: 0; font-size: 13px; font-weight: 700; color: var(--accent); border: 1.5px solid var(--accent); border-radius: 100px; padding: 9px 18px; transition: background .12s, color .12s; white-space: nowrap; }
+  .cta:hover { background: var(--accent); color: var(--accent-contrast); filter: none; text-decoration: none; }
+  .cta-row { display: flex; flex-direction: column; gap: 6px; flex-shrink: 0; }
+  .cta-ghost { font-size: 12px; font-weight: 700; color: var(--muted); border: 1.5px solid var(--border); border-radius: 100px; padding: 7px 14px; background: none; cursor: pointer; white-space: nowrap; font-family: 'Manrope', inherit; text-align: center; }
+  .cta-ghost:hover { border-color: var(--accent); color: var(--accent); }
+  .cta-ghost.added { border-color: var(--accent); color: var(--accent); }
+  .footer-note { font-size: 13px; color: var(--muted-2); }
+  .empty { color: var(--muted-2); padding: 24px; text-align: center; }
+
+  .tabs { display: flex; gap: 6px; background: var(--chip-bg); padding: 4px; border-radius: 12px; width: fit-content; }
+  .tab-btn { border: none; background: transparent; color: var(--muted); font-family: 'Manrope', inherit; font-weight: 700; font-size: 14px; padding: 8px 16px; border-radius: 9px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+  .tab-btn.active { background: var(--surface); color: var(--text); box-shadow: 0 1px 2px rgba(0,0,0,0.08); }
+  .tab-badge { font-size: 11px; font-weight: 800; background: var(--accent); color: var(--accent-contrast); border-radius: 100px; min-width: 18px; height: 18px; padding: 0 5px; display: inline-flex; align-items: center; justify-content: center; }
+  .panel[hidden] { display: none; }
+
+  .history-dropdown { position: absolute; top: calc(100% + 6px); left: 0; right: 0; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; box-shadow: var(--shadow); padding: 6px; z-index: 10; }
+  .history-dropdown[hidden] { display: none; }
+  .history-item { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 9px; cursor: pointer; font-size: 14px; color: var(--text); }
+  .history-item:hover { background: var(--chip-bg); }
+  .history-item svg { flex-shrink: 0; opacity: 0.6; }
+  .history-more { text-align: center; padding: 8px; font-size: 12px; font-weight: 700; color: var(--accent); cursor: pointer; border-radius: 9px; }
+  .history-more:hover { background: var(--chip-bg); }
+
+  .est-item-row { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-bottom: 1px solid var(--row-border); }
+  .est-item-row:last-child { border-bottom: none; }
+  .est-item-name { flex: 1; min-width: 0; font-size: 14px; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .est-item-pin { font-size: 11px; font-weight: 700; color: var(--accent-tint-text); background: var(--accent-tint-bg); padding: 2px 8px; border-radius: 100px; flex-shrink: 0; }
+  .est-item-qty { width: 56px; text-align: center; padding: 6px 4px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg); color: var(--text); font-family: inherit; font-size: 13px; flex-shrink: 0; }
+  .est-item-remove { width: 28px; height: 28px; flex-shrink: 0; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--muted); cursor: pointer; font-size: 15px; line-height: 1; }
+  .est-item-remove:hover { border-color: var(--accent); color: var(--accent); }
+  .est-line-edit { font-size: 12px; font-weight: 700; color: var(--accent); background: none; border: none; cursor: pointer; padding: 4px 0; text-decoration: underline; font-family: inherit; }
+
+  .edit-banner { display: flex; align-items: center; justify-content: space-between; gap: 12px; background: var(--accent-tint-bg); color: var(--accent-tint-text); border-radius: 14px; padding: 12px 18px; font-size: 13px; font-weight: 600; margin-top: 16px; }
+  .edit-banner[hidden] { display: none; }
+  .edit-banner-cancel { background: none; border: none; color: var(--accent-tint-text); font-weight: 700; text-decoration: underline; cursor: pointer; font-size: 13px; font-family: inherit; flex-shrink: 0; }
+
+  .estimate-input { width: 100%; min-height: 120px; resize: vertical; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 16px 18px; font-size: 15px; font-family: inherit; color: var(--text); line-height: 1.6; }
+  .estimate-input::placeholder { color: var(--muted-2); }
+  .estimate-hint { font-size: 13px; color: var(--muted-2); }
+  .summary-card { background: var(--accent-tint-bg); border-radius: 20px; padding: 22px 26px; display: flex; flex-direction: column; gap: 4px; }
+  .summary-card .total { font-size: 28px; font-weight: 800; color: var(--accent-tint-text); }
+  .summary-card .label { font-size: 13px; color: var(--accent-tint-text); opacity: 0.85; }
+  .est-line { display: flex; align-items: center; gap: 16px; padding: 16px 24px; border-bottom: 1px solid var(--row-border); }
+  .est-line:last-child { border-bottom: none; }
+  .est-line .qty { font-size: 12px; color: var(--muted-2); }
+  .est-line.missing { opacity: 0.6; }
+  .store-option { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 20px; border-bottom: 1px solid var(--row-border); }
+  .store-option:last-child { border-bottom: none; }
+  .store-option .badge-incomplete { font-size: 11px; color: var(--muted-2); }
+  .section-label { font-size: 13px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+
+  .discounts-panel { position: absolute; top: 46px; right: 46px; width: 260px; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; box-shadow: var(--shadow); padding: 16px; z-index: 10; display: flex; flex-direction: column; gap: 12px; }
+  .discounts-panel[hidden] { display: none; }
+  .apply-discounts-btn { margin-top: 4px; background: var(--accent); color: var(--accent-contrast); border: none; border-radius: 10px; height: 36px; font-weight: 700; font-size: 13px; cursor: pointer; font-family: 'Manrope', inherit; }
+  .apply-discounts-btn:hover { filter: brightness(0.92); }
+  .discounts-panel .title { font-family: 'Manrope', inherit; font-weight: 700; font-size: 14px; }
+  .discounts-panel .hint { font-size: 12px; color: var(--muted-2); line-height: 1.4; }
+  .discount-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .discount-row span { font-size: 13px; color: var(--text); }
+  .discount-row input { width: 56px; text-align: right; padding: 6px 8px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg); color: var(--text); font-family: inherit; font-size: 13px; }
+  .discount-badge { font-size: 11px; font-weight: 700; color: var(--accent-tint-text); background: var(--accent-tint-bg); padding: 2px 7px; border-radius: 100px; }
+  input[type="number"] { -moz-appearance: textfield; }
+  input[type="number"]::-webkit-outer-spin-button,
+  input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  .price-original { font-size: 12px; color: var(--muted-2); text-decoration: line-through; }
+  .unit-price { font-size: 12px; font-weight: 600; color: var(--muted); }
+  .notice { font-size: 13px; line-height: 1.45; color: var(--accent-tint-text); background: var(--accent-tint-bg); border-radius: 12px; padding: 10px 14px; margin-bottom: 12px; }
+  .line-status { font-size: 12px; color: var(--muted-2); }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div style="display:flex; flex-direction:column; gap:10px;">
+      <div class="top-row">
+        <div class="logo-badge"><span class="heading">С</span></div>
+        <span class="heading wordmark">Стройцены</span>
+        <span class="pill-tag">БИЙСК</span>
+        <div style="margin-left:auto; display:flex; gap:8px; position:relative;">
+          <button class="theme-toggle" id="discountsToggle" title="Мои скидочные карты" aria-label="Мои скидочные карты">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M20 12L12 20L4 12V5a1 1 0 0 1 1-1h7l8 8Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><circle cx="8.5" cy="7.5" r="1.2" fill="currentColor"/></svg>
+          </button>
+          <div id="discountsPanel" class="discounts-panel" hidden></div>
+          <button class="theme-toggle" id="themeToggle" title="Переключить тему" aria-label="Переключить тему"></button>
+        </div>
+      </div>
+      <div class="subtitle">Сравниваем цены на стройматериалы в магазинах города — вводите товар и размер, находим, где дешевле.</div>
+    </div>
+
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="search">Поиск товара</button>
+      <button class="tab-btn" data-tab="estimate">Смета<span id="estimateBadge" class="tab-badge" hidden></span></button>
+    </div>
+
+    <div id="panel-search" class="panel">
+      <div style="display:flex; flex-direction:column; gap:10px;">
+        <div class="search-row">
+          <div class="search-input-wrap" style="position:relative;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+              <circle cx="11" cy="11" r="7" stroke="var(--muted-2)" stroke-width="2"/>
+              <path d="M21 21L16.65 16.65" stroke="var(--muted-2)" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+            <input type="text" id="q" placeholder="Например: ДСП 1,22х2,44х16" autocomplete="off" />
+            <div id="historyDropdown" class="history-dropdown" hidden></div>
+          </div>
+          <button id="go" class="heading">Найти</button>
+        </div>
+        <div class="meta-line" id="metaLine"></div>
+      </div>
+
+      <div id="editBanner" class="edit-banner" hidden></div>
+      <div id="results" style="margin-top:20px;"></div>
+    </div>
+
+    <div id="panel-estimate" class="panel" hidden>
+      <div style="display:flex; flex-direction:column; gap:10px;">
+        <textarea id="estimateInput" class="estimate-input" placeholder="По одной позиции на строку — можно вставить прямо из своей сметы (Excel), например:&#10;ДСП 1,22х2,44х16 x10&#10;Цемент М500 - меш - 40&#10;Кирпич керамический - шт - 1500&#10;Перфоратор"></textarea>
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
+          <div class="estimate-hint">Количество — слитным «x5» в конце строки или как в смете: «- ед - количество». Без него считаем 1 шт. Размеры («Уголок 50 х 50») количеством не считаются.</div>
+          <button id="addToEstimateList" class="heading" style="background:var(--surface); color:var(--text); border:1px solid var(--border); border-radius:14px; height:48px; padding:0 24px; font-weight:700; font-size:15px; cursor:pointer; flex-shrink:0;">Добавить в список</button>
+        </div>
+      </div>
+
+      <div id="estimateListBox" style="margin-top:16px;"></div>
+
+      <div id="estimateResults" style="margin-top:20px; display:flex; flex-direction:column; gap:20px;"></div>
+    </div>
+
+    <div class="footer-note">Цены собираются автоматически из строительных магазинов Бийска и обновляются в фоне.</div>
+  </div>
+
+<script>
+function escapeHtml(str) {
+  return String(str ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+// --- Тема (атрибут data-theme на <html> уже выставлен инлайн-скриптом в <head>) ---
+const root = document.documentElement;
+const THEME_KEY = 'stroyceny-theme';
+
+function renderThemeIcon(theme) {
+  const toggle = document.getElementById('themeToggle');
+  const sun = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="4.5" stroke="currentColor" stroke-width="2"/><path d="M12 2v2.5M12 19.5V22M4.2 4.2l1.8 1.8M18 18l1.8 1.8M2 12h2.5M19.5 12H22M4.2 19.8l1.8-1.8M18 6l1.8-1.8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
+  const moon = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 0 0 10.5 10.5Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>';
+  toggle.innerHTML = theme === 'dark' ? sun : moon;
+}
+
+function applyTheme(theme) {
+  root.setAttribute('data-theme', theme);
+  localStorage.setItem(THEME_KEY, theme);
+  renderThemeIcon(theme);
+}
+
+renderThemeIcon(root.getAttribute('data-theme'));
+
+document.getElementById('themeToggle').addEventListener('click', () => {
+  applyTheme(root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+});
+
+if (window.matchMedia) {
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+    if (!localStorage.getItem(THEME_KEY)) applyTheme(e.matches ? 'dark' : 'light');
+  });
+}
+
+// --- Вкладки ---
+function switchTab(tab) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+  document.getElementById('panel-search').hidden = tab !== 'search';
+  document.getElementById('panel-estimate').hidden = tab !== 'estimate';
+}
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    if (btn.dataset.tab === 'estimate') exitReplaceMode();
+    switchTab(btn.dataset.tab);
+  });
+});
+
+// --- Скидочные карты (хранятся локально в браузере) ---
+const DISCOUNTS_KEY = 'stroyceny-discounts';
+
+const CUSTOM_STORES_KEY = 'stroyceny-custom-stores';
+
+function loadDiscounts() {
+  try {
+    const raw = localStorage.getItem(DISCOUNTS_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+}
+
+function saveDiscounts(map) {
+  localStorage.setItem(DISCOUNTS_KEY, JSON.stringify(map));
+}
+
+function loadCustomStores() {
+  try {
+    const raw = localStorage.getItem(CUSTOM_STORES_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveCustomStores(list) {
+  localStorage.setItem(CUSTOM_STORES_KEY, JSON.stringify(list));
+}
+
+let discountsMap = loadDiscounts();
+let customStores = loadCustomStores();
+
+// Список магазинов грузим один раз. Скидки хранятся по slug, а не по названию:
+// переименование магазина в базе больше не обнуляло бы сохранённые скидки.
+let knownStores = [];
+const storesReady = fetch('/api/stores')
+  .then(resp => (resp.ok ? resp.json() : []))
+  .catch(() => [])
+  .then(list => {
+    knownStores = Array.isArray(list) ? list : [];
+    migrateDiscountsToSlugs(knownStores);
+    return knownStores;
+  });
+
+function migrateDiscountsToSlugs(stores) {
+  const slugs = new Set(stores.map(s => s.slug));
+  const slugByName = new Map(stores.map(s => [s.name, s.slug]));
+  let changed = false;
+  for (const key of Object.keys(discountsMap)) {
+    if (!slugs.has(key) && slugByName.has(key)) {
+      discountsMap[slugByName.get(key)] = discountsMap[key];
+      delete discountsMap[key];
+      changed = true;
+    }
+  }
+  if (changed) saveDiscounts(discountsMap);
+}
+
+async function renderDiscountsPanel() {
+  const panel = document.getElementById('discountsPanel');
+  const stores = await storesReady;
+
+  // магазины, добавленные вручную (например, скидка есть, а магазин ещё не подключён к парсеру)
+  const entries = [
+    ...stores.map(s => ({ key: s.slug, label: s.name })),
+    ...customStores.map(name => ({ key: name, label: name })),
+  ];
+  const allNames = entries.map(e => e.label);
+
+  const rows = entries.map(({ key, label }) => {
+    const value = discountsMap[key] ?? '';
+    return `<div class="discount-row">
+      <span>${escapeHtml(label)}</span>
+      <input type="number" min="0" max="90" step="1" data-store="${escapeHtml(key)}" value="${escapeHtml(value)}" placeholder="0">
+    </div>`;
+  }).join('');
+
+  panel.innerHTML = `
+    <div class="title">Мои скидочные карты</div>
+    <div class="hint">Укажите вашу личную скидку (%) в каждом магазине — она учитывается при поиске и в смете.</div>
+    ${rows || '<div class="hint">Магазинов пока нет — добавьте вручную ниже.</div>'}
+    <div class="discount-row" style="gap:6px;">
+      <input type="text" id="newStoreName" placeholder="Название магазина" style="flex:1; min-width:0; padding:6px 8px; border:1px solid var(--border); border-radius:8px; background:var(--bg); color:var(--text); font-family:inherit; font-size:13px;">
+      <input type="number" id="newStorePercent" min="0" max="90" step="1" placeholder="%" style="width:48px; padding:6px 8px; border:1px solid var(--border); border-radius:8px; background:var(--bg); color:var(--text); font-family:inherit; font-size:13px;">
+      <button id="addStoreBtn" type="button" title="Добавить магазин" style="width:28px; height:28px; flex-shrink:0; border:1px solid var(--border); border-radius:8px; background:var(--surface); color:var(--text); cursor:pointer; font-size:16px; line-height:1;">+</button>
+    </div>
+    <button id="applyDiscountsBtn" class="apply-discounts-btn">Применить</button>`;
+
+  panel.querySelectorAll('input[data-store]').forEach(inp => {
+    inp.addEventListener('change', () => {
+      const percent = parseFloat(inp.value);
+      const store = inp.dataset.store;
+      if (!percent || percent <= 0) {
+        delete discountsMap[store];
+      } else {
+        discountsMap[store] = Math.min(percent, 90);
+      }
+      saveDiscounts(discountsMap);
+    });
+  });
+
+  document.getElementById('addStoreBtn').addEventListener('click', () => {
+    const nameInput = document.getElementById('newStoreName');
+    const percentInput = document.getElementById('newStorePercent');
+    const name = nameInput.value.trim();
+    if (!name) return;
+    if (!allNames.includes(name) && !customStores.includes(name)) {
+      customStores.push(name);
+      saveCustomStores(customStores);
+    }
+    const percent = parseFloat(percentInput.value);
+    if (percent > 0) discountsMap[name] = Math.min(percent, 90);
+    saveDiscounts(discountsMap);
+    renderDiscountsPanel();
+  });
+
+  document.getElementById('applyDiscountsBtn').addEventListener('click', () => {
+    panel.querySelectorAll('input[data-store]').forEach(inp => {
+      const percent = parseFloat(inp.value);
+      const store = inp.dataset.store;
+      if (!percent || percent <= 0) {
+        delete discountsMap[store];
+      } else {
+        discountsMap[store] = Math.min(percent, 90);
+      }
+    });
+    saveDiscounts(discountsMap);
+    discountsPanel.hidden = true;
+    // Скидка меняет и выдачу, и смету — пересчитываем сразу, а не после ручного повтора.
+    if (input.value.trim()) search();
+    if (estimateList.length) calcEstimate();
+  });
+}
+
+const discountsToggle = document.getElementById('discountsToggle');
+const discountsPanel = document.getElementById('discountsPanel');
+discountsToggle.addEventListener('click', async (e) => {
+  e.stopPropagation();
+  const willOpen = discountsPanel.hidden;
+  discountsPanel.hidden = !willOpen;
+  if (willOpen) await renderDiscountsPanel();
+});
+discountsPanel.addEventListener('click', (e) => e.stopPropagation());
+document.addEventListener('click', () => {
+  discountsPanel.hidden = true;
+});
+
+// --- Поиск ---
+const STORE_PALETTE = ['#2F6F4E', '#2B5FA0', '#7C5CBF', '#B4562F', '#1E7A7A', '#946A1E'];
+function storeColor(store) {
+  let hash = 0;
+  for (let i = 0; i < store.length; i++) hash = (hash * 31 + store.charCodeAt(i)) >>> 0;
+  return STORE_PALETTE[hash % STORE_PALETTE.length];
+}
+
+function fmtMoney(value, digits) {
+  return Number(value || 0).toLocaleString('ru-RU', { maximumFractionDigits: digits === undefined ? 2 : digits });
+}
+
+function priceCell(it) {
+  const parts = [];
+  if (it.discount_percent > 0 && it.effective_price < it.price) {
+    parts.push(`<div class="price heading num">${fmtMoney(it.effective_price)} ₽</div>`);
+    parts.push(`<div class="price-original num">${fmtMoney(it.price)} ₽</div>`);
+    parts.push(`<span class="discount-badge">карта −${it.discount_percent}%</span>`);
+  } else {
+    parts.push(`<div class="price heading num">${fmtMoney(it.price)} ₽</div>`);
+  }
+  // Цена за единицу — то, по чему товары вообще сравнимы между собой
+  if (it.unit_price && it.pack_unit) {
+    parts.push(`<div class="unit-price num">${fmtMoney(it.unit_price)} ₽/${escapeHtml(it.pack_unit)}</div>`);
+  }
+  return parts.join('');
+}
+
+const input = document.getElementById('q');
+const results = document.getElementById('results');
+const metaLine = document.getElementById('metaLine');
+const historyDropdown = document.getElementById('historyDropdown');
+
+function formatDate(iso) {
+  const d = new Date(iso);
+  return d.toLocaleString('ru-RU', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' });
+}
+
+// --- История поиска ---
+const HISTORY_KEY = 'stroyceny-search-history';
+const HISTORY_MAX = 15;
+const HISTORY_COLLAPSED = 5;
+
+function loadHistory() {
+  try {
+    const raw = localStorage.getItem(HISTORY_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+function addToHistory(q) {
+  let history = loadHistory().filter(h => h.toLowerCase() !== q.toLowerCase());
+  history.unshift(q);
+  history = history.slice(0, HISTORY_MAX);
+  localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+}
+
+function historyItemHtml(q) {
+  return `<div class="history-item" data-query="${escapeHtml(q)}">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M12 7v5l3 3M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <span>${escapeHtml(q)}</span>
+  </div>`;
+}
+
+function renderHistoryDropdown(expanded) {
+  const history = loadHistory();
+  if (!history.length) {
+    historyDropdown.hidden = true;
+    return;
+  }
+  const shown = expanded ? history.slice(0, HISTORY_MAX) : history.slice(0, HISTORY_COLLAPSED);
+  const moreBtn = !expanded && history.length > HISTORY_COLLAPSED
+    ? `<div class="history-more" data-expand="1">Показать все (${history.length})</div>` : '';
+  historyDropdown.innerHTML = shown.map(historyItemHtml).join('') + moreBtn;
+  historyDropdown.hidden = false;
+}
+
+historyDropdown.addEventListener('click', (e) => {
+  const expandBtn = e.target.closest('[data-expand]');
+  if (expandBtn) {
+    renderHistoryDropdown(true);
+    return;
+  }
+  const item = e.target.closest('.history-item');
+  if (item) {
+    input.value = item.dataset.query;
+    historyDropdown.hidden = true;
+    search();
+  }
+});
+input.addEventListener('focus', () => renderHistoryDropdown(false));
+input.addEventListener('click', (e) => { e.stopPropagation(); renderHistoryDropdown(false); });
+historyDropdown.addEventListener('click', (e) => e.stopPropagation());
+document.addEventListener('click', () => { historyDropdown.hidden = true; });
+
+async function search() {
+  const q = input.value.trim();
+  if (!q) return;
+  historyDropdown.hidden = true;
+  addToHistory(q);
+  results.innerHTML = '<div class="empty">Ищу...</div>';
+  metaLine.textContent = '';
+
+  let data;
+  try {
+    await storesReady;  // скидки уходят на сервер по slug магазина
+    const params = new URLSearchParams({ q });
+    if (Object.keys(discountsMap).length) params.set('discounts', JSON.stringify(discountsMap));
+    const resp = await fetch('/api/search?' + params.toString());
+    if (resp.status === 422) throw new Error('запрос не содержит ни слов, ни размеров');
+    if (!resp.ok) throw new Error('сервер ответил ошибкой ' + resp.status);
+    data = await resp.json();
+  } catch (err) {
+    console.error('search failed', err);
+    results.innerHTML = `<div class="results-card"><div class="empty">Не удалось выполнить поиск: ${escapeHtml(err.message)}</div></div>`;
+    return;
+  }
+
+  const items = data.results || [];
+  const maybeAlso = data.maybe_also || [];
+
+  if (!items.length && !maybeAlso.length) {
+    results.innerHTML = '<div class="results-card"><div class="empty">Ничего не найдено</div></div>';
+    return;
+  }
+
+  if (items.length) {
+    const storeCount = new Set(items.map(it => it.store)).size;
+    const latest = items.reduce((max, it) => it.scraped_at > max ? it.scraped_at : max, items[0].scraped_at);
+    metaLine.innerHTML = `<span>${items.length} предложени${items.length === 1 ? 'е' : items.length < 5 ? 'я' : 'й'}</span><span>·</span><span>${storeCount} магазин${storeCount === 1 ? '' : storeCount < 5 ? 'а' : 'ов'}</span><span>·</span><span>обновлено ${formatDate(latest)}</span>`;
+  } else {
+    metaLine.textContent = '';
+  }
+
+  const notices = [];
+  if (data.relaxed) {
+    notices.push('Точного совпадения по всем словам нет — показываем товары того же типа, самые близкие по названию сверху.');
+  }
+  if (items.length > 1 && data.best_index === null) {
+    notices.push('Фасовка у этих товаров разная или не распознана, поэтому «лучшая цена» не выделена: сравнивайте цену за единицу.');
+  }
+  const noticeBlock = notices.map(text => `<div class="notice">${escapeHtml(text)}</div>`).join('');
+
+  const mainBlock = items.length
+    ? `<div class="results-card">${renderResultRows(items, data.best_index, data.comparison_unit)}</div>`
+    : '<div class="results-card"><div class="empty">Точных совпадений не найдено</div></div>';
+
+  const maybeBlock = maybeAlso.length ? `
+    <details style="margin-top:16px;">
+      <summary style="cursor:pointer; font-size:13px; font-weight:700; color:var(--muted); padding:4px 0;">Возможно, вас также заинтересует (${maybeAlso.length})</summary>
+      <div class="results-card" style="margin-top:10px;">${renderResultRows(maybeAlso, null, null)}</div>
+    </details>` : '';
+
+  results.innerHTML = noticeBlock + mainBlock + maybeBlock;
+}
+
+function renderResultRows(items, bestIndex, comparisonUnit) {
+  return items.map((it, i) => {
+    const isBest = bestIndex !== null && bestIndex !== undefined && i === bestIndex;
+    return `
+    <div class="row ${isBest ? 'best' : ''}">
+      <div class="price-block">
+        ${priceCell(it)}
+        ${isBest ? `<span class="best-badge">Лучшая цена${comparisonUnit ? ' за ' + escapeHtml(comparisonUnit) : ''}</span>` : ''}
+      </div>
+      <div class="mid-block">
+        <a href="${escapeHtml(it.url)}" target="_blank" rel="noopener" class="name-link">${escapeHtml(it.name)}</a>
+        <div class="chip-row">
+          <span class="chip"><span class="store-dot" style="background:${storeColor(it.store)}">${escapeHtml(it.store[0])}</span>${escapeHtml(it.store)}</span>
+          ${it.dimensions ? `<span class="chip num">${escapeHtml(it.dimensions)}</span>` : ''}
+          ${it.pack ? `<span class="chip num">${escapeHtml(it.pack)}</span>` : ''}
+          ${it.category ? `<span class="chip">${escapeHtml(it.category)}</span>` : ''}
+        </div>
+      </div>
+      <div class="cta-row">
+        <a href="${escapeHtml(it.url)}" target="_blank" rel="noopener" class="cta">В магазин</a>
+        <button type="button" class="cta-ghost" data-add-to-estimate
+          data-name="${escapeHtml(it.name)}" data-url="${escapeHtml(it.url)}"
+          data-store="${escapeHtml(it.store)}">+ в смету</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+results.addEventListener('click', (e) => {
+  const btn = e.target.closest('[data-add-to-estimate]');
+  if (!btn) return;
+  addPinnedToEstimate({
+    name: btn.dataset.name,
+    url: btn.dataset.url,
+    store: btn.dataset.store,
+  });
+  btn.textContent = 'Добавлено ✓';
+  btn.classList.add('added');
+  setTimeout(() => { btn.textContent = '+ в смету'; btn.classList.remove('added'); }, 1500);
+});
+
+document.getElementById('go').addEventListener('click', search);
+input.addEventListener('keydown', e => { if (e.key === 'Enter') search(); });
+
+// --- Смета: состояние списка позиций ---
+const estimateInput = document.getElementById('estimateInput');
+const estimateResults = document.getElementById('estimateResults');
+const estimateListBox = document.getElementById('estimateListBox');
+const estimateBadge = document.getElementById('estimateBadge');
+const ESTIMATE_LIST_KEY = 'stroyceny-estimate-list';
+
+// Позиция списка: {id, query, qty, url|null, store|null}.
+// url — «закреплённый» товар: его цена берётся из базы при каждом расчёте, а не из
+// снимка в localStorage, иначе смета жила бы на ценах месячной давности.
+function normalizeItem(raw) {
+  if (!raw || typeof raw !== 'object') return null;
+  const pinned = raw.pinned && typeof raw.pinned === 'object' ? raw.pinned : null;  // формат старых версий
+  const query = (pinned && pinned.name) || raw.query;
+  if (!query) return null;
+  return {
+    id: raw.id || ('q' + Date.now() + Math.random().toString(36).slice(2)),
+    query: String(query),
+    qty: Number(raw.qty) > 0 ? Number(raw.qty) : 1,
+    url: (pinned && pinned.url) || raw.url || null,
+    store: (pinned && pinned.store) || raw.store || null,
+  };
+}
+
+function loadEstimateList() {
+  try {
+    const raw = localStorage.getItem(ESTIMATE_LIST_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed.map(normalizeItem).filter(Boolean) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveEstimateList() {
+  localStorage.setItem(ESTIMATE_LIST_KEY, JSON.stringify(estimateList));
+}
+
+let estimateList = loadEstimateList();
+
+// --- Режим замены: пришли из "Показать похожие / изменить" на конкретной строке сметы ---
+let editingEstimateItemId = null;
+const editBanner = document.getElementById('editBanner');
+
+function enterReplaceMode(id, label) {
+  editingEstimateItemId = id;
+  editBanner.hidden = false;
+  editBanner.innerHTML = `<span>Выбираете замену для «${escapeHtml(label)}» — нажмите «+ в смету» у нужного товара</span>
+    <button type="button" class="edit-banner-cancel" id="cancelReplaceBtn">Отменить</button>`;
+  document.getElementById('cancelReplaceBtn').addEventListener('click', exitReplaceMode);
+}
+
+function exitReplaceMode() {
+  editingEstimateItemId = null;
+  editBanner.hidden = true;
+  editBanner.innerHTML = '';
+}
+
+function addPinnedToEstimate(product) {
+  if (editingEstimateItemId) {
+    const item = estimateList.find(it => it.id === editingEstimateItemId);
+    if (item) {
+      item.query = product.name;
+      item.url = product.url;
+      item.store = product.store;
+    }
+    exitReplaceMode();
+  } else {
+    // тот же товар (та же ссылка) уже есть в списке — просто увеличиваем количество
+    const existing = estimateList.find(it => it.url === product.url);
+    if (existing) {
+      existing.qty += 1;
+    } else {
+      estimateList.push({
+        id: 'p' + Date.now() + Math.random().toString(36).slice(2),
+        query: product.name,
+        qty: 1,
+        url: product.url,
+        store: product.store,
+      });
+    }
+  }
+  saveEstimateList();
+  renderEstimateListBox();
+  calcEstimate();
+}
+
+function renderEstimateListBox() {
+  estimateBadge.hidden = estimateList.length === 0;
+  estimateBadge.textContent = estimateList.length || '';
+
+  if (!estimateList.length) {
+    estimateListBox.innerHTML = '';
+    return;
+  }
+
+  const rows = estimateList.map(it => `
+    <div class="est-item-row" data-id="${it.id}">
+      <span class="est-item-name" title="${escapeHtml(it.query)}">${escapeHtml(it.query)}</span>
+      ${it.url ? `<span class="est-item-pin">${escapeHtml(it.store || 'выбрано вручную')}</span>` : ''}
+      <input type="number" class="est-item-qty" data-qty-for="${it.id}" min="0.1" step="1" value="${it.qty}">
+      <button type="button" class="est-item-remove" data-remove="${it.id}" title="Убрать">×</button>
+    </div>`).join('');
+
+  estimateListBox.innerHTML = `<div class="results-card">${rows}</div>`;
+}
+
+estimateListBox.addEventListener('click', (e) => {
+  const removeId = e.target.closest('[data-remove]')?.dataset.remove;
+  if (removeId) {
+    estimateList = estimateList.filter(it => it.id !== removeId);
+    saveEstimateList();
+    renderEstimateListBox();
+    calcEstimate();
+  }
+});
+estimateListBox.addEventListener('change', (e) => {
+  const qtyId = e.target.dataset.qtyFor;
+  if (!qtyId) return;
+  const item = estimateList.find(it => it.id === qtyId);
+  if (!item) return;
+  const qty = parseFloat(e.target.value);
+  if (!(qty > 0)) {
+    e.target.value = item.qty;  // иначе поле показывало бы значение, которого нет в расчёте
+    return;
+  }
+  item.qty = qty;
+  saveEstimateList();
+  calcEstimate();
+});
+
+document.getElementById('addToEstimateList').addEventListener('click', async () => {
+  const text = estimateInput.value.trim();
+  if (!text) return;
+  // Разбор строк живёт на бэкенде: один и тот же код разбирает количество и размеры,
+  // поэтому "Уголок 50 х 50" больше не превращается в 50 штук уголка.
+  let parsed = [];
+  try {
+    const resp = await fetch('/api/parse-lines', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text }),
+    });
+    if (!resp.ok) throw new Error('сервер ответил ошибкой ' + resp.status);
+    parsed = (await resp.json()).items || [];
+  } catch (err) {
+    console.error('parse-lines failed', err);
+    estimateResults.innerHTML = `<div class="results-card"><div class="empty">Не удалось разобрать список: ${escapeHtml(err.message)}</div></div>`;
+    return;
+  }
+  if (!parsed.length) return;
+
+  parsed.forEach(p => {
+    // такая же текстовая позиция уже есть в списке — суммируем количество, а не дублируем строку
+    const existing = estimateList.find(it => !it.url && it.query.toLowerCase() === p.query.toLowerCase());
+    if (existing) {
+      existing.qty += p.qty;
+    } else {
+      estimateList.push({
+        id: 'q' + Date.now() + Math.random().toString(36).slice(2),
+        query: p.query,
+        qty: p.qty,
+        url: null,
+        store: null,
+      });
+    }
+  });
+  estimateInput.value = '';
+  saveEstimateList();
+  renderEstimateListBox();
+  calcEstimate();
+});
+
+renderEstimateListBox();
+if (estimateList.length) calcEstimate();  // список пережил перезагрузку страницы — сразу считаем
+
+function editLineButton(itemId, query) {
+  return `<button type="button" class="est-line-edit" data-edit-id="${escapeHtml(itemId)}" data-edit-query="${escapeHtml(query)}">Показать похожие / изменить</button>`;
+}
+
+function priceWithQty(total, qty) {
+  return `<div style="display:flex; align-items:baseline; gap:8px;">
+    <div class="price heading num">${fmtMoney(total, 0)} ₽</div>
+    <div class="qty">× ${qty}</div>
+  </div>`;
+}
+
+function lineChips(best, extraChip) {
+  return `<div class="chip-row">
+    <span class="chip"><span class="store-dot" style="background:${storeColor(best.store)}">${escapeHtml(best.store[0])}</span>${escapeHtml(best.store)}</span>
+    ${best.dimensions ? `<span class="chip num">${escapeHtml(best.dimensions)}</span>` : ''}
+    ${best.pack ? `<span class="chip num">${escapeHtml(best.pack)}</span>` : ''}
+    ${best.unit_price && best.pack_unit ? `<span class="chip num">${fmtMoney(best.unit_price)} ₽/${escapeHtml(best.pack_unit)}</span>` : ''}
+    ${extraChip || ''}
+  </div>`;
+}
+
+function estimateLineHtml(line, item, extraChip) {
+  const best = line.best;
+  return `
+    <div class="est-line">
+      <div class="mid-block">
+        <a href="${escapeHtml(best.url)}" target="_blank" rel="noopener" class="name-link">${escapeHtml(best.name)}</a>
+        ${lineChips(best, extraChip)}
+        ${editLineButton(item.id, line.query)}
+      </div>
+      ${priceWithQty(best.line_total, line.qty)}
+    </div>`;
+}
+
+function pinnedLineHtml(line, item) {
+  return estimateLineHtml(line, item, '<span class="est-item-pin">выбрано вручную</span>');
+}
+
+function resolvedLineHtml(line, item) {
+  return estimateLineHtml(line, item, line.relaxed ? '<span class="est-item-pin">близкое совпадение</span>' : '');
+}
+
+function missingLineHtml(line, item) {
+  const text = line.status === 'unavailable'
+    ? `Товар больше не продаётся: ${escapeHtml(line.query)}`
+    : `Не найдено: ${escapeHtml(line.query)}`;
+  return `<div class="est-line missing">
+    <div class="mid-block">
+      <span>${text}</span>
+      ${editLineButton(item.id, line.query)}
+    </div>
+  </div>`;
+}
+
+let estimateCalcSeq = 0;
+
+async function calcEstimate() {
+  const seq = ++estimateCalcSeq;
+
+  if (!estimateList.length) {
+    estimateResults.innerHTML = '<div class="results-card"><div class="empty">Список пуст — добавьте позиции через текстовое поле или кнопкой «+ в смету» на найденных товарах</div></div>';
+    return;
+  }
+  estimateResults.innerHTML = '<div class="empty">Считаю смету...</div>';
+
+  let data;
+  try {
+    await storesReady;
+    const resp = await fetch('/api/estimate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        // Закреплённые товары тоже считает бэкенд — по актуальной цене из базы и с той же скидкой
+        items: estimateList.map(it => ({ query: it.query, qty: it.qty, url: it.url || null })),
+        discounts: discountsMap,
+      }),
+    });
+    if (!resp.ok) throw new Error('сервер ответил ошибкой ' + resp.status);
+    data = await resp.json();
+  } catch (err) {
+    if (seq !== estimateCalcSeq) return; // список успели изменить ещё раз, этот ответ уже неактуален
+    console.error('estimate failed', err);
+    estimateResults.innerHTML = `<div class="results-card"><div class="empty">Не удалось посчитать смету: ${escapeHtml(err.message)}</div></div>`;
+    return;
+  }
+  if (seq !== estimateCalcSeq) return; // список успели изменить ещё раз, этот ответ уже неактуален
+
+  // Бэкенд возвращает строки в том же порядке и с номером позиции, поэтому сопоставление
+  // по тексту запроса (с очередью на случай дублей) больше не нужно.
+  const compositionRows = data.lines.map(line => {
+    const item = estimateList[line.index];
+    if (!item) return '';
+    if (line.status !== 'ok') return missingLineHtml(line, item);
+    return line.pinned ? pinnedLineHtml(line, item) : resolvedLineHtml(line, item);
+  }).join('');
+
+  const summary = `
+    <div class="summary-card">
+      <span class="label">Итого по смете (${estimateList.length} поз.)</span>
+      <span class="total heading num">${fmtMoney(data.optimal_total, 0)} ₽</span>
+      ${data.savings_vs_single_store > 0 ? `<span class="label">Экономия ${fmtMoney(data.savings_vs_single_store, 0)} ₽ по сравнению с покупкой всего (кроме выбранных вручную) в одном магазине</span>` : ''}
+      ${data.pinned_total > 0 ? `<span class="label">Из них ${fmtMoney(data.pinned_total, 0)} ₽ — товары, выбранные вручную (не участвуют в сравнении магазинов ниже)</span>` : ''}
+      ${data.unresolved.length ? `<span class="label">Не учтено позиций: ${data.unresolved.length}</span>` : ''}
+    </div>`;
+
+  const storeOptionsBlock = data.store_options.length ? `
+    <div>
+      <div class="section-label" style="margin-bottom:10px;">Если покупать в одном магазине${data.pinned_total > 0 ? ' (без выбранных вручную)' : ''}</div>
+      <div class="results-card">${data.store_options.map(o => `
+        <div class="store-option">
+          <span><span class="store-dot" style="background:${storeColor(o.store)}; display:inline-flex; margin-right:8px;">${escapeHtml(o.store[0])}</span>${escapeHtml(o.store)}${o.discount_percent > 0 ? ` <span class="discount-badge">−${o.discount_percent}%</span>` : ''}</span>
+          ${o.complete
+            ? `<span class="price heading num" style="font-size:16px;">${fmtMoney(o.total, 0)} ₽</span>`
+            : `<span class="badge-incomplete">нет в наличии: ${escapeHtml(o.missing.join(', '))}</span>`}
+        </div>`).join('')}</div>
+    </div>` : '';
+
+  estimateResults.innerHTML = `
+    ${summary}
+    <div>
+      <div class="section-label" style="margin-bottom:10px;">Состав закупки</div>
+      <div class="results-card">${compositionRows}</div>
+    </div>
+    ${storeOptionsBlock}`;
+}
+
+estimateResults.addEventListener('click', (e) => {
+  const editBtn = e.target.closest('[data-edit-query]');
+  if (!editBtn) return;
+  enterReplaceMode(editBtn.dataset.editId, editBtn.dataset.editQuery);
+  switchTab('search');
+  input.value = editBtn.dataset.editQuery;
+  search();
+});
+</script>
+</body>
+</html>

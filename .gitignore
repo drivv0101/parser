@@ -1,0 +1,21 @@
+# База с ценами — рабочие данные, а не исходники (пересобирается run_scrape)
+prices.db
+prices.db-wal
+prices.db-shm
+*.db
+*.db-wal
+*.db-shm
+*.backup
+
+logs/
+
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
