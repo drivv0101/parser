@@ -7,6 +7,7 @@ HTTP-клиент ради тестов.
 
 import os
 import tempfile
+import time
 import unittest
 from datetime import UTC, datetime, timedelta
 
@@ -257,6 +258,27 @@ class TestScrapeSchedule(unittest.TestCase):
         data = api.health()
         self.assertEqual(data["status"], "ok")
         self.assertGreater(data["active_products"], 0)
+
+
+class TestScrapeLock(unittest.TestCase):
+    def test_second_run_is_refused_while_first_holds_lock(self):
+        from app import run_scrape
+
+        with run_scrape.scrape_lock():
+            self.assertTrue(run_scrape.LOCK_PATH.exists())
+            with self.assertRaises(run_scrape.ScrapeInProgress):
+                run_scrape.run_store("stroymir")  # до сети не доходит — замок раньше
+        self.assertFalse(run_scrape.LOCK_PATH.exists())
+
+    def test_stale_lock_is_taken_over(self):
+        from app import run_scrape
+
+        run_scrape.LOCK_PATH.write_text("dead")
+        old = time.time() - run_scrape.LOCK_STALE_SECONDS - 60
+        os.utime(run_scrape.LOCK_PATH, (old, old))
+        with run_scrape.scrape_lock():
+            self.assertNotEqual(run_scrape.LOCK_PATH.read_text(), "dead")
+        self.assertFalse(run_scrape.LOCK_PATH.exists())
 
 
 class TestParseLines(unittest.TestCase):

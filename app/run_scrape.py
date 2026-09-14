@@ -1,7 +1,10 @@
 import argparse
+import os
+import time
+from contextlib import contextmanager
 from datetime import UTC, datetime
 
-from app.db import get_session, init_db
+from app.db import DB_PATH, get_session, init_db
 from app.logging_config import get_logger, setup_logging
 from app.matching import derive_pack, extract_dimensions, unit_price, validate_price
 from app.models import Product, Store
@@ -16,6 +19,37 @@ MIN_COVERAGE_RATIO = 0.5
 
 class ScrapeFailed(Exception):
     """Прогон не дал пригодных данных — база не изменена."""
+
+
+class ScrapeInProgress(Exception):
+    """Обход уже идёт в другом процессе."""
+
+
+# Обход могут запустить одновременно планировщик внутри сервера и человек командой
+# run_scrape — тогда два процесса часами ходят по одному сайту и в конце дерутся за базу.
+# Файл-замок рядом с базой это исключает; замок старше LOCK_STALE_SECONDS считаем
+# оставшимся после падения процесса и забираем.
+LOCK_PATH = DB_PATH.with_name(DB_PATH.name + ".scrape.lock")
+LOCK_STALE_SECONDS = 4 * 3600
+
+
+@contextmanager
+def scrape_lock():
+    try:
+        fd = os.open(LOCK_PATH, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+    except FileExistsError:
+        age = time.time() - LOCK_PATH.stat().st_mtime
+        if age < LOCK_STALE_SECONDS:
+            raise ScrapeInProgress(f"обход уже идёт (замок {LOCK_PATH.name}, {age / 60:.0f} мин)")
+        logger.warning("замок %s старше %d ч — считаем оставшимся после сбоя, забираем", LOCK_PATH.name, LOCK_STALE_SECONDS // 3600)
+        LOCK_PATH.unlink()
+        fd = os.open(LOCK_PATH, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+    try:
+        os.write(fd, str(os.getpid()).encode())
+        os.close(fd)
+        yield
+    finally:
+        LOCK_PATH.unlink(missing_ok=True)
 
 
 def _apply_record(product: Product, record, now: datetime) -> None:
@@ -42,6 +76,11 @@ def _apply_record(product: Product, record, now: datetime) -> None:
 
 def run_store(slug: str) -> int:
     """Обновляет каталог одного магазина. Возвращает число сохранённых товаров."""
+    with scrape_lock():
+        return _run_store_locked(slug)
+
+
+def _run_store_locked(slug: str) -> int:
     scraper_cls = SCRAPERS[slug]
     scraper = scraper_cls()
     logger.info("[%s] обход %s ...", slug, scraper.base_url)
@@ -154,6 +193,8 @@ def run_all() -> None:
     for slug in SCRAPERS:
         try:
             run_store(slug)
+        except ScrapeInProgress as exc:
+            logger.warning("[%s] пропущен: %s", slug, exc)
         except Exception:  # магазин может быть временно недоступен
             logger.exception("[%s] прогон не удался", slug)
 
