@@ -24,6 +24,7 @@ from app.matching import (
     like_escape,
     parse_estimate_text,
     parse_query,
+    sold_by_weight,
 )
 from app.models import Product, Store
 from app.run_scrape import run_all, run_store
@@ -255,6 +256,15 @@ def _display_category(category: str | None) -> str | None:
     return category
 
 
+def _display_pack(product: Product) -> str | None:
+    if not product.pack_value or not product.pack_unit:
+        return None
+    # "Гвозди 3*80 вес": фасовки нет, цена за килограмм — так и пишем, а не "1 кг"
+    if product.pack_unit == "кг" and product.pack_value == 1 and sold_by_weight(product.name):
+        return "на вес"
+    return f"{product.pack_value:g} {product.pack_unit}"
+
+
 def _product_to_dict(product: Product, discounts: dict[str, float]) -> dict:
     discount_percent = discounts.get(product.store.slug, 0)
     effective = _effective_price(product.price, product.store.slug, discounts)
@@ -272,7 +282,7 @@ def _product_to_dict(product: Product, discounts: dict[str, float]) -> dict:
         "category": _display_category(product.category),
         "url": product.url,
         "dimensions": format_dimensions(product.length_mm, product.width_mm, product.thickness_mm),
-        "pack": f"{product.pack_value:g} {product.pack_unit}" if product.pack_value and product.pack_unit else None,
+        "pack": _display_pack(product),
         "pack_unit": product.pack_unit,
         "unit_price": effective_unit_price,
         "scraped_at": _utc_iso(product.scraped_at),

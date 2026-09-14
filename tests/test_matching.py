@@ -121,6 +121,25 @@ class TestPack(unittest.TestCase):
         self.assertIsNone(derive_pack(axe, extract_dimensions(axe),
                                       "Инструменты, хозтовары, крепеж / Слесарно-столярный инструмент"))
 
+    def test_sold_by_weight_means_price_per_kilogram(self):
+        # Строймир: "вес" в конце названия = продаётся на вес, цена за 1 кг
+        pack = extract_pack("Гвозди 3*80  вес")
+        self.assertEqual((pack.value, pack.unit), (1, "кг"))
+        self.assertEqual(unit_price(125, pack), 125)
+
+    def test_explicit_pack_wins_over_weight_word(self):
+        pack = extract_pack("гвоздь финишный оцинк 1.8*40 (0,1кг.) вес")
+        self.assertEqual((pack.value, pack.unit), (0.1, "кг"))
+
+    def test_weight_word_false_positives(self):
+        # Бренды и характеристика "вес 4,3кг" — не признак весового товара
+        for name in ("Панель ПВХ Вестанвинд №22-009", "Ревизия с крышкой ПП 50 (Вессель)",
+                     "Крепление сиденья к унитазу ВестМ белый", "Весы электронные кухонные"):
+            self.assertIsNone(extract_pack(name), name)
+        saw = "Пила дисковая 185х16/20мм, пропил 65мм, вес 4,3кг, сбор пыли"
+        self.assertEqual(extract_pack(saw).value, 4.3)  # характеристика, но явный вес — не "на вес"
+        self.assertIsNone(derive_pack(saw, extract_dimensions(saw), "Инструменты"))  # и инструмент
+
     def test_unit_price(self):
         self.assertEqual(unit_price(580, extract_pack("Цемент 50кг")), 11.6)
         self.assertEqual(unit_price(154, extract_pack("Цементная смесь 2 кг")), 77.0)

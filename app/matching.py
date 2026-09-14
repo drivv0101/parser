@@ -165,6 +165,16 @@ class Pack:
         return f"{_fmt_num(self.value)} {self.unit}"
 
 
+# "Гвозди 3*80 вес" — так Строймир помечает товар, который продаётся на вес: цена за 1 кг.
+# Отдельное слово, не часть "Вестанвинд"/"Вессель" (бренды) и не "вес 4,3кг" (характеристика
+# пилы — там число после слова).
+_SOLD_BY_WEIGHT_RE = re.compile(r"\b(?:на\s+вес|вес|весов\w*)\b(?!\s*[:=]?\s*\d)", re.IGNORECASE)
+
+
+def sold_by_weight(text: str) -> bool:
+    return bool(_SOLD_BY_WEIGHT_RE.search(text))
+
+
 def _plausible(value: float, unit: str) -> bool:
     low, high = _PACK_RANGES[unit]
     return low <= value <= high
@@ -177,6 +187,9 @@ def extract_pack(text: str) -> Pack | None:
             value = round(_to_float(match.group(1)) * factor, 4)
             if _plausible(value, unit):
                 return Pack(value=value, unit=unit)
+    # Явной фасовки нет, но товар помечен как весовой — цена указана за килограмм
+    if sold_by_weight(text):
+        return Pack(value=1.0, unit="кг")
     return None
 
 
