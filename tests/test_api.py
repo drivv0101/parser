@@ -120,6 +120,36 @@ class TestSearch(unittest.TestCase):
         self.assertIsNone(data["comparison_unit"])
         self.assertIsNone(data["best_index"])
 
+    def test_on_order_items_rank_below_in_stock_and_get_no_badge(self):
+        session = get_session()
+        try:
+            store = session.query(Store).filter_by(slug="alterra").one()
+            catalog = [
+                ("Грунтовка глубокая 10 л (Бийск)", 500.0, True, "в наличии: 12 шт"),
+                ("Грунтовка глубокая 10 л (Барнаул)", 400.0, False, "под заказ"),
+                ("Грунтовка глубокая 10 л (без данных)", 450.0, None, None),
+            ]
+            for index, (name, price, in_stock, note) in enumerate(catalog):
+                session.add(Product(
+                    store_id=store.id, name=name, search_text=name.lower(),
+                    url=f"https://example.test/gr{index}", price=price,
+                    pack_value=10, pack_unit="л", unit_price=price / 10,
+                    in_stock=in_stock, stock_note=note, is_active=True, scraped_at=NOW,
+                ))
+            session.commit()
+        finally:
+            session.close()
+
+        data = api.search(q="грунтовка")
+        names = [it["name"] for it in data["results"]]
+        # самый дешёвый — под заказ, но он уходит в конец, а бейдж — самому дешёвому из бийских
+        self.assertEqual(names[-1], "Грунтовка глубокая 10 л (Барнаул)")
+        self.assertEqual(data["results"][data["best_index"]]["name"], "Грунтовка глубокая 10 л (без данных)")
+
+        line = api.estimate(api.EstimateRequest(items=[api.EstimateItem(query="грунтовка", qty=1)]))["lines"][0]
+        self.assertNotEqual(line["best"]["name"], "Грунтовка глубокая 10 л (Барнаул)")
+        self.assertFalse(line["best"]["in_stock"] is False)
+
     def test_inactive_products_are_hidden(self):
         names = [it["name"] for it in api.search(q="цемент")["results"]]
         self.assertNotIn("Снятый с продажи цемент 50кг", names)

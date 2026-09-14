@@ -21,6 +21,8 @@ _ADDED_COLUMNS: dict[str, list[tuple[str, str]]] = {
         ("pack_unit", "VARCHAR(10)"),
         ("unit_price", "FLOAT"),
         ("is_active", "BOOLEAN NOT NULL DEFAULT 1"),
+        ("in_stock", "BOOLEAN"),
+        ("stock_note", "VARCHAR(120)"),
     ],
 }
 

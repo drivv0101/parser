@@ -1,6 +1,6 @@
 from urllib.parse import urljoin
 
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, Tag
 
 from app.logging_config import get_logger
 from app.matching import parse_price
@@ -36,6 +36,19 @@ class StroymirScraper(BaseScraper):
         super().__init__()
         self.category_paths = category_paths if category_paths is not None else CATEGORY_PATHS
         self.max_pages_per_category = max_pages_per_category
+
+    @staticmethod
+    def parse_availability(card: Tag) -> tuple[bool | None, str | None]:
+        """Магазин один и он в Бийске. В карточке: <p class="text-available">Доступно:<span>на складе</span></p>."""
+        tag = card.select_one("p.text-available span")
+        if tag is None:
+            return None, None
+        text = tag.get_text(" ", strip=True).lower()
+        if not text:
+            return None, None
+        if "склад" in text or "налич" in text:
+            return True, text
+        return False, text
 
     def fetch_products(self) -> list[ProductRecord]:
         products: list[ProductRecord] = []
@@ -92,6 +105,7 @@ class StroymirScraper(BaseScraper):
                     # "Цена по запросу", 0 ₽ и прочее, что нельзя сравнивать.
                     logger.debug("пропущен товар с некорректной ценой: %s", name)
                     continue
+                in_stock, stock_note = self.parse_availability(card)
                 products.append(
                     ProductRecord(
                         name=name,
@@ -99,6 +113,8 @@ class StroymirScraper(BaseScraper):
                         price=price,
                         unit=None,
                         category=category_name,
+                        in_stock=in_stock,
+                        stock_note=stock_note,
                     )
                 )
 

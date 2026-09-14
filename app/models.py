@@ -47,6 +47,10 @@ class Product(Base):
     pack_unit: Mapped[str | None] = mapped_column(String(10), nullable=True)
     unit_price: Mapped[float | None] = mapped_column(Float, nullable=True)
 
+    # Наличие в Бийске: True — есть, False — под заказ, None — сайт не сообщил.
+    in_stock: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    stock_note: Mapped[str | None] = mapped_column(String(120), nullable=True)
+
     # Товар пропал из каталога магазина: из выдачи убираем, но историю не теряем.
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, server_default="1")
     # Время прогона, в котором товар был последний раз виден на сайте (наивный UTC).

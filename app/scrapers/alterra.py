@@ -1,6 +1,7 @@
+import re
 from urllib.parse import urljoin
 
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, Tag
 
 from app.logging_config import get_logger
 from app.matching import validate_price
@@ -19,10 +20,20 @@ EXCLUDED_TOP_HREF_PARTS = ["sad-i-ogorod", "gotovye-resheniya-dlya-dachi", "/sho
 MAX_PAGES_PER_CATEGORY = 50
 
 
+# Сеть работает в нескольких городах, и без cookie сайт показывает Барнаул: барнаульские
+# остатки И барнаульские цены (у 6 цементов из 7 они отличаются от бийских). Первый прогон
+# без этой cookie собрал 15 739 барнаульских цен под видом бийских.
+CITY_COOKIE = {"BITRIX_SM_torgzal": "biysk"}
+CITY_NAME = "Бийск"
+
+_QTY_RE = re.compile(r"([><]?)\s*(\d+)\s*([а-яa-z.]*)", re.IGNORECASE)
+
+
 class AlterraScraper(BaseScraper):
     slug = "alterra"
     name = "ТГ-Алтерра"
     base_url = "https://tg-alterra.ru"
+    cookies = CITY_COOKIE
 
     def __init__(self, category_paths: list[str] | None = None):
         super().__init__()
@@ -115,6 +126,49 @@ class AlterraScraper(BaseScraper):
 
         return products
 
+    @staticmethod
+    def parse_availability(card: Tag) -> tuple[bool | None, str | None]:
+        """Наличие в Бийске из блока карточки:
+
+            <div class="availability availability_in tip"><span class="tip__name">В наличии</span>
+              <ul class="tip__vlist"><li><span>Бийск, пер. Шубенский, 75</span><span><strong>20 уп</strong></span></li>…
+
+        Считаем остаток по строкам с бийскими адресами (с cookie города сайт показывает
+        только их, но проверяем адрес на случай смены поведения). ">100" читаем как 100.
+        """
+        block = card.select_one("div.availability")
+        if block is None:
+            return None, None
+
+        total = 0
+        unit = ""
+        rows = 0
+        for row in block.select("ul.tip__vlist li"):
+            cells = [c.get_text(" ", strip=True) for c in row.find_all("span", recursive=False)]
+            if len(cells) < 2 or CITY_NAME not in cells[0]:
+                continue
+            match = _QTY_RE.search(cells[1])
+            if not match:
+                continue
+            rows += 1
+            total += int(match.group(2))
+            unit = unit or match.group(3)
+
+        if rows:
+            if total > 0:
+                return True, f"в наличии: {total}{'+' if total >= 100 else ''} {unit}".strip()
+            return False, "под заказ"
+
+        # Таблицы нет — судим по подписи блока
+        label = block.select_one("span.tip__name")
+        text = label.get_text(" ", strip=True).lower() if label else ""
+        classes = " ".join(block.get("class", []))
+        if "availability_in" in classes or text.startswith("в наличии"):
+            return True, text or "в наличии"
+        if text:
+            return False, text
+        return None, None
+
     def _parse_cards(self, soup: BeautifulSoup, category_name: str | None) -> list[ProductRecord]:
         products: list[ProductRecord] = []
         for card in soup.select("div.card__wrapper"):
@@ -140,6 +194,7 @@ class AlterraScraper(BaseScraper):
                 logger.debug("пропущен товар с некорректной ценой: %s", name)
                 continue
 
+            in_stock, stock_note = self.parse_availability(card)
             products.append(
                 ProductRecord(
                     name=name,
@@ -149,6 +204,8 @@ class AlterraScraper(BaseScraper):
                     # рулонов нельзя — фасовка считается из названия (app/matching.py).
                     unit=None,
                     category=category_name,
+                    in_stock=in_stock,
+                    stock_note=stock_note,
                 )
             )
         return products

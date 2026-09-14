@@ -285,8 +285,16 @@ def _product_to_dict(product: Product, discounts: dict[str, float]) -> dict:
         "pack": _display_pack(product),
         "pack_unit": product.pack_unit,
         "unit_price": effective_unit_price,
+        "in_stock": product.in_stock,
+        "stock_note": product.stock_note,
         "scraped_at": _utc_iso(product.scraped_at),
     }
+
+
+def _availability_rank(product: Product) -> int:
+    """0 — есть в Бийске (или сайт не сообщил), 1 — под заказ. Товар из другого города
+    не должен выигрывать у того, что можно купить сегодня."""
+    return 1 if product.in_stock is False else 0
 
 
 def _best_index(items: list[dict], unit: str | None) -> int | None:
@@ -295,7 +303,11 @@ def _best_index(items: list[dict], unit: str | None) -> int | None:
     пакет смеси 2 кг за 154 ₽ вместо мешка 50 кг за 580 ₽."""
     if not unit:
         return None
-    candidates = [(i, it) for i, it in enumerate(items) if it["pack_unit"] == unit and it["unit_price"]]
+    # Только то, что есть в Бийске: "лучшая цена" на товар под заказ бесполезна
+    candidates = [
+        (i, it) for i, it in enumerate(items)
+        if it["pack_unit"] == unit and it["unit_price"] and it["in_stock"] is not False
+    ]
     if len(candidates) < 2:
         return None
     return min(candidates, key=lambda pair: pair[1]["unit_price"])[0]
@@ -326,6 +338,7 @@ def search(
             key=lambda pair: (
                 _relevance_tier(pair[1], keywords),
                 -_matched_words(pair[1], keywords),
+                _availability_rank(pair[1]),
                 pair[0]["effective_price"],
             ),
         )
@@ -415,6 +428,7 @@ def _line_key(product: Product, keywords: list[str], unit: str | None, typical: 
     return (
         _relevance_tier(product, keywords),
         -_matched_words(product, keywords),
+        _availability_rank(product),
         1 if oversized else 0,
         0 if comparable else 1,
         product.unit_price if comparable else product.price,
@@ -471,7 +485,10 @@ def estimate(req: EstimateRequest) -> dict:
 
             best_overall = min(
                 best_per_store.values(),
-                key=lambda p: (_relevance_tier(p, keywords), -_matched_words(p, keywords), line_total(p)),
+                key=lambda p: (
+                    _relevance_tier(p, keywords), -_matched_words(p, keywords),
+                    _availability_rank(p), line_total(p),
+                ),
             )
             lines.append({
                 **base,

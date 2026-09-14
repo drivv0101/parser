@@ -26,12 +26,18 @@ class ProductRecord:
     price: float
     unit: str | None = None
     category: str | None = None
+    # Наличие в Бийске: True — есть на складе/в магазине, False — под заказ или нет,
+    # None — сайт не сообщил. stock_note — как это сформулировал магазин ("20 уп").
+    in_stock: bool | None = None
+    stock_note: str | None = None
 
 
 class BaseScraper:
     slug: str
     name: str
     base_url: str
+    # Cookie, которые нужны сайту, чтобы показывать нужный город (см. AlterraScraper)
+    cookies: dict[str, str] = {}
 
     def __init__(self) -> None:
         self._robots: RobotFileParser | None = None
@@ -90,7 +96,7 @@ class BaseScraper:
         if not self.can_fetch(url):
             raise DisallowedByRobots(f"robots.txt запрещает {url}")
         self.wait_between_requests()
-        response = requests.get(url, headers=DEFAULT_HEADERS, timeout=REQUEST_TIMEOUT)
+        response = requests.get(url, headers=DEFAULT_HEADERS, cookies=self.cookies, timeout=REQUEST_TIMEOUT)
         self._last_request_at = time.monotonic()
         response.raise_for_status()
         return response

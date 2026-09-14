@@ -70,6 +70,8 @@ def _apply_record(product: Product, record, now: datetime) -> None:
     product.pack_value = pack.value if pack else None
     product.pack_unit = pack.unit if pack else None
     product.unit_price = unit_price(record.price, pack)
+    product.in_stock = record.in_stock
+    product.stock_note = record.stock_note
     product.is_active = True
     product.scraped_at = now
 
