@@ -420,7 +420,7 @@ function fmtMoney(value, digits) {
   return Number(value || 0).toLocaleString('ru-RU', { maximumFractionDigits: digits === undefined ? 2 : digits });
 }
 
-function priceCell(it) {
+function priceCell(it, comparisonUnit) {
   const parts = [];
   if (it.discount_percent > 0 && it.effective_price < it.price) {
     parts.push(`<div class="price heading num">${fmtMoney(it.effective_price)} ₽</div>`);
@@ -429,8 +429,9 @@ function priceCell(it) {
   } else {
     parts.push(`<div class="price heading num">${fmtMoney(it.price)} ₽</div>`);
   }
-  // Цена за единицу — то, по чему товары вообще сравнимы между собой
-  if (it.unit_price && it.pack_unit) {
+  // Цена за единицу показывается, только если этой единицей меряют и остальные товары
+  // выдачи: у колуна вес есть, но 791 ₽/кг ни с чем не сравнить и смысла не несёт.
+  if (it.unit_price && it.pack_unit && it.pack_unit === comparisonUnit) {
     parts.push(`<div class="unit-price num">${fmtMoney(it.unit_price)} ₽/${escapeHtml(it.pack_unit)}</div>`);
   }
   return parts.join('');
@@ -549,7 +550,7 @@ async function search() {
     notices.push('Точного совпадения по всем словам нет — показываем товары того же типа, самые близкие по названию сверху.');
   }
   if (items.length > 1 && data.best_index === null) {
-    notices.push('Фасовка у этих товаров разная или не распознана, поэтому «лучшая цена» не выделена: сравнивайте цену за единицу.');
+    notices.push('Эти товары продаются поштучно или фасовка у них разная, поэтому «лучшая цена» не выделена — сравнить их одной цифрой нельзя.');
   }
   const noticeBlock = notices.map(text => `<div class="notice">${escapeHtml(text)}</div>`).join('');
 
@@ -572,7 +573,7 @@ function renderResultRows(items, bestIndex, comparisonUnit) {
     return `
     <div class="row ${isBest ? 'best' : ''}">
       <div class="price-block">
-        ${priceCell(it)}
+        ${priceCell(it, comparisonUnit)}
         ${isBest ? `<span class="best-badge">Лучшая цена${comparisonUnit ? ' за ' + escapeHtml(comparisonUnit) : ''}</span>` : ''}
       </div>
       <div class="mid-block">

@@ -166,12 +166,18 @@ def _matched_words(product: Product, keywords: list[str]) -> int:
 def dominant_pack_unit(products: list[Product]) -> str | None:
     """Единица, по которой товары этой выдачи вообще сопоставимы между собой.
     Сравнивать 77 ₽/кг с 300 ₽/шт бессмысленно, поэтому цена за единицу используется
-    только внутри одной единицы измерения."""
+    только внутри одной единицы измерения.
+
+    Единица должна покрывать хотя бы половину выдачи: если из восьми колунов вес указан
+    у двух, этот товар меряют штуками, а не килограммами, и сравнивать их по ₽/кг нельзя.
+    """
+    if not products:
+        return None
     counts = Counter(p.pack_unit for p in products if p.pack_unit and p.unit_price)
     if not counts:
         return None
     unit, count = counts.most_common(1)[0]
-    return unit if count >= 2 else None
+    return unit if count >= 2 and count * 2 >= len(products) else None
 
 
 def _clean_discounts(discounts: dict | None) -> dict[str, float]:
@@ -384,8 +390,11 @@ def estimate(req: EstimateRequest) -> dict:
                 continue
 
             keywords = matches.keywords
-            unit = dominant_pack_unit(matches.products)
-            typical = typical_pack_value(matches.products, unit)
+            # Сопоставимость считаем по релевантным товарам: в выдаче по "цемент" есть ещё
+            # наличники и кирпич с упоминанием цемента, и они бы размыли долю мешков.
+            relevant = [p for p in matches.products if _relevance_tier(p, keywords) == 0] or matches.products
+            unit = dominant_pack_unit(relevant)
+            typical = typical_pack_value(relevant, unit)
 
             best_per_store: dict[str, Product] = {}
             for product in matches.products:

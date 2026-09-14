@@ -180,6 +180,17 @@ def extract_pack(text: str) -> Pack | None:
     return None
 
 
+# Категории, где число с единицей веса — характеристика товара, а не фасовка:
+# "Колун в сборе (3,6кг)" весит 3,6 кг, но продаётся штукой, и 791 ₽/кг о нём ничего
+# не говорит. Инструмент и инвентарь продаются поштучно, поэтому фасовку из их
+# названий не извлекаем вовсе.
+_UNIT_LESS_CATEGORY_RE = re.compile(r"инструмент|instrument|инвентар", re.IGNORECASE)
+
+
+def category_sold_by_piece(category: str | None) -> bool:
+    return bool(category and _UNIT_LESS_CATEGORY_RE.search(category))
+
+
 def _looks_like_sheet(dims: Dimensions) -> bool:
     if not dims.length_mm or not dims.width_mm:
         return False
@@ -189,9 +200,11 @@ def _looks_like_sheet(dims: Dimensions) -> bool:
     return dims.thickness_mm is not None and dims.thickness_mm <= MAX_SHEET_THICKNESS_MM
 
 
-def derive_pack(text: str, dims: Dimensions) -> Pack | None:
+def derive_pack(text: str, dims: Dimensions, category: str | None = None) -> Pack | None:
     """Фасовка из названия, а для листовых материалов — площадь из распознанных габаритов
     (ДСП 1220×2440 продаётся листами, но сравнивают его по цене за м²)."""
+    if category_sold_by_piece(category):
+        return None
     pack = extract_pack(text)
     if pack is not None:
         return pack

@@ -13,6 +13,7 @@ from datetime import UTC, datetime
 _TMP_DB = os.path.join(tempfile.mkdtemp(prefix="stroy-test-"), "test.db")
 os.environ["STROY_DB_PATH"] = _TMP_DB
 os.environ["STROY_AUTO_SCRAPE"] = "0"
+os.environ["STROY_LOG_TO_FILE"] = "0"
 
 from app import main as api  # noqa: E402  (после подмены пути к базе)
 from app.db import get_session, init_db  # noqa: E402
@@ -88,6 +89,35 @@ class TestSearch(unittest.TestCase):
         self.assertEqual(data["comparison_unit"], "кг")
         self.assertEqual(best["name"], "Цемент топки ПЦ-450 50кг")
         self.assertEqual(best["unit_price"], 11.6)
+
+    def test_no_badge_when_most_goods_are_sold_by_piece(self):
+        # Вес указан у двух колунов из пяти — значит этот товар меряют штуками,
+        # и выделять "лучшую цену за кг" нельзя
+        session = get_session()
+        try:
+            store = session.query(Store).filter_by(slug="stroymir").one()
+            catalog = [
+                ("Колун в сборе (3,6кг) фибергласовое топорище", 2850.0, 3.6, 791.67),
+                ("Колун в сборе (1,9кг) кованный, дер. топорище", 1700.0, 1.9, 894.74),
+                ("Колун-топор ТК17", 2800.0, None, None),
+                ("Колун-топор ТК21", 3350.0, None, None),
+                ("Колун-топор ТК25", 4500.0, None, None),
+            ]
+            for index, (name, price, pack, per_unit) in enumerate(catalog):
+                session.add(Product(
+                    store_id=store.id, name=name, search_text=name.lower(),
+                    url=f"https://example.test/axe{index}", price=price,
+                    pack_value=pack, pack_unit="кг" if pack else None, unit_price=per_unit,
+                    is_active=True, scraped_at=NOW,
+                ))
+            session.commit()
+        finally:
+            session.close()
+
+        data = api.search(q="колун")
+        self.assertEqual(len(data["results"]), 5)
+        self.assertIsNone(data["comparison_unit"])
+        self.assertIsNone(data["best_index"])
 
     def test_inactive_products_are_hidden(self):
         names = [it["name"] for it in api.search(q="цемент")["results"]]

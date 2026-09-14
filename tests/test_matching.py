@@ -100,6 +100,18 @@ class TestPack(unittest.TestCase):
         pack = derive_pack(name, extract_dimensions(name))
         self.assertEqual((pack.unit, pack.value), ("м²", 0.36))
 
+    def test_tool_weight_is_not_a_pack(self):
+        # "Колун в сборе (3,6кг)" весит 3,6 кг, но продаётся штукой: 791 ₽/кг — бессмыслица
+        name = "Колун в сборе (3,6кг) фибергласовое топорище Вихрь 73/2/1/5"
+        self.assertIsNotNone(derive_pack(name, extract_dimensions(name)))  # без категории не отличить
+        self.assertIsNone(derive_pack(name, extract_dimensions(name), "Инструменты"))
+        self.assertIsNone(derive_pack(name, extract_dimensions(name), "/catalog/ruchnoy-instrument/"))
+
+    def test_bulk_goods_keep_pack_in_any_category(self):
+        name = "Цемент Искитим ПЦ-500 50кг"
+        pack = derive_pack(name, extract_dimensions(name), "Строительные материалы")
+        self.assertEqual((pack.value, pack.unit), (50, "кг"))
+
     def test_unit_price(self):
         self.assertEqual(unit_price(580, extract_pack("Цемент 50кг")), 11.6)
         self.assertEqual(unit_price(154, extract_pack("Цементная смесь 2 кг")), 77.0)

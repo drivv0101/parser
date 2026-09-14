@@ -20,7 +20,7 @@ class ScrapeFailed(Exception):
 
 def _apply_record(product: Product, record, now: datetime) -> None:
     dims = extract_dimensions(record.name)
-    pack = derive_pack(record.name, dims)
+    pack = derive_pack(record.name, dims, record.category)
 
     product.name = record.name
     # SQLite умеет LOWER() только для ASCII ("Д" и "д" для него разные символы),
@@ -127,7 +127,7 @@ def recompute_derived() -> None:
                     hidden += 1
                 continue
             dims = extract_dimensions(product.name)
-            pack = derive_pack(product.name, dims)
+            pack = derive_pack(product.name, dims, product.category)
             new_unit_price = unit_price(product.price, pack)
             before = (
                 product.length_mm, product.width_mm, product.thickness_mm,

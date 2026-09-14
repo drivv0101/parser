@@ -56,11 +56,15 @@ class AlterraScraper(BaseScraper):
 
         products: list[ProductRecord] = []
         seen_urls: set[str] = set()
-        for path in category_paths:
+        for number, path in enumerate(category_paths, start=1):
             for record in self._fetch_category(path):
                 if record.url not in seen_urls:
                     seen_urls.add(record.url)
                     products.append(record)
+            # Обход 400 подкатегорий занимает десятки минут: без отметок прогресса
+            # непонятно, идёт работа или процесс завис.
+            if number % 25 == 0 or number == len(category_paths):
+                logger.info("пройдено %d из %d категорий, товаров: %d", number, len(category_paths), len(products))
         if self._pagination_blocked:
             logger.info("пагинация запрещена robots.txt — по каждой подкатегории собрана только первая страница")
         return products
