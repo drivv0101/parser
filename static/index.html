@@ -162,6 +162,68 @@
   :root[data-theme="dark"] .chip-stock { color: #8FD3AE; background: rgba(143,211,174,0.12); }
   .notice { font-size: 13px; line-height: 1.45; color: var(--accent-tint-text); background: var(--accent-tint-bg); border-radius: 12px; padding: 10px 14px; margin-bottom: 12px; }
   .line-status { font-size: 12px; color: var(--muted-2); }
+
+  /* --- Панель фильтров под поиском: те же «чипы», что и в карточках --- */
+  .filter-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .filter-row[hidden] { display: none; }
+  .select { appearance: none; -webkit-appearance: none; font: inherit; font-size: 13px; font-weight: 600; color: var(--muted); background-color: var(--chip-bg); border: none; border-radius: 100px; padding: 7px 30px 7px 12px; cursor: pointer;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path d='M1 1l4 4 4-4' fill='none' stroke='%23746C60' stroke-width='1.6' stroke-linecap='round'/></svg>"); background-repeat: no-repeat; background-position: right 12px center; }
+  :root[data-theme="dark"] .select { background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path d='M1 1l4 4 4-4' fill='none' stroke='%23A79C8C' stroke-width='1.6' stroke-linecap='round'/></svg>"); }
+  .select:hover, .toggle-chip:hover { color: var(--text); }
+  .toggle-chip { display: inline-flex; align-items: center; gap: 6px; font: inherit; font-size: 13px; font-weight: 600; color: var(--muted); background: var(--chip-bg); border: none; border-radius: 100px; padding: 7px 12px; cursor: pointer; }
+  .toggle-chip::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--muted-2); }
+  .toggle-chip.on { color: var(--accent-contrast); background: var(--accent); }
+  .toggle-chip.on::before { background: var(--accent-contrast); }
+  .more-btn { display: block; width: 100%; margin-top: 12px; font: inherit; font-size: 13px; font-weight: 700; color: var(--muted); background: var(--surface); border: 1.5px solid var(--border); border-radius: 14px; padding: 12px; cursor: pointer; }
+  .more-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* --- История цены внутри карточки --- */
+  .link-btn { font: inherit; font-size: 12px; font-weight: 700; color: var(--muted); background: none; border: none; cursor: pointer; padding: 4px 0; text-decoration: underline; text-underline-offset: 2px; }
+  .link-btn:hover { color: var(--accent); }
+  .history-box { font-size: 12px; color: var(--muted); background: var(--chip-bg); border-radius: 10px; padding: 8px 12px; margin-top: 4px; }
+  .history-box[hidden] { display: none; }
+  .history-box table { border-collapse: collapse; }
+  .history-box td { padding: 2px 14px 2px 0; }
+
+  /* --- Строка списка сметы: количество + единица --- */
+  .est-item-qty, .est-item-unit { text-align: center; padding: 6px 4px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg); color: var(--text); font-family: inherit; font-size: 13px; flex-shrink: 0; }
+  .est-item-qty { width: 64px; }
+  .est-item-unit { width: 58px; appearance: none; -webkit-appearance: none; cursor: pointer; padding-right: 4px; }
+  .est-item-review { flex-basis: 100%; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 12px; color: var(--accent-tint-text); background: var(--accent-tint-bg); border-radius: 8px; padding: 6px 10px; }
+  .est-item-review .link-btn { color: var(--accent-tint-text); }
+  .est-item-row { flex-wrap: wrap; }
+
+  /* --- Действия над результатом сметы --- */
+  .est-actions { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+  .est-actions .group { display: flex; gap: 8px; }
+  .est-line .need { font-size: 12px; color: var(--muted-2); text-align: right; }
+  .store-option .sub { font-size: 12px; color: var(--muted-2); margin-left: 8px; }
+
+  /* --- Настройки магазинов (скидка и доставка) --- */
+  .discounts-panel { width: 340px; }
+  .discount-row input { width: 62px; }
+  .discount-row .field { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: var(--muted-2); flex-shrink: 0; }
+
+  @media (max-width: 640px) {
+    .wrap { padding: 28px 14px; gap: 20px; }
+    .row, .est-line { flex-wrap: wrap; gap: 12px; padding: 16px; }
+    .cta-row { flex-direction: row; flex-wrap: wrap; }
+    .price-block { min-width: 100px; }
+    .discounts-panel { right: 0; width: min(340px, calc(100vw - 28px)); }
+    .search-input-wrap { padding: 0 12px; }
+    #go { padding: 0 18px; }
+  }
+  @media print {
+    body { background: #fff !important; color: #000 !important; }
+    .wrap { max-width: none; padding: 0; gap: 12px; }
+    .top-row, .subtitle, .tabs, #panel-search, .footer-note, #estimateInput, .estimate-hint, #addToEstimateList,
+    #estimateListBox, .est-actions, .est-line-edit, .link-btn { display: none !important; }
+    #panel-estimate { display: block !important; }
+    .results-card, .summary-card { box-shadow: none; border: 1px solid #ccc; background: #fff !important; color: #000 !important; }
+    .summary-card span, .name-link { color: #000 !important; }
+    .est-line { break-inside: avoid; }
+    @page { margin: 15mm; }
+  }
 </style>
 </head>
 <body>
@@ -202,6 +264,15 @@
           </div>
           <button id="go" class="heading">Найти</button>
         </div>
+        <div class="filter-row" id="filterRow" hidden>
+          <select class="select" id="filterStore" aria-label="Магазин"><option value="">Все магазины</option></select>
+          <button type="button" class="toggle-chip" id="filterStock" aria-pressed="false">Только в наличии</button>
+          <select class="select" id="filterSort" aria-label="Сортировка">
+            <option value="relevance">Сначала подходящие</option>
+            <option value="price">Сначала дешёвые</option>
+            <option value="unit_price">Дешёвые за единицу</option>
+          </select>
+        </div>
         <div class="meta-line" id="metaLine"></div>
       </div>
 
@@ -213,7 +284,7 @@
       <div style="display:flex; flex-direction:column; gap:10px;">
         <textarea id="estimateInput" class="estimate-input" placeholder="По одной позиции на строку — можно вставить прямо из своей сметы (Excel), например:&#10;ДСП 1,22х2,44х16 x10&#10;Цемент М500 - меш - 40&#10;Кирпич керамический - шт - 1500&#10;Перфоратор"></textarea>
         <div style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
-          <div class="estimate-hint">Перед добавлением проверьте количество и единицу. «уп» — целая упаковка или штука. Количество — слитным «x5» в конце строки или как в смете: «- ед - количество». Без него считаем 1 шт. Размеры («Уголок 50 х 50») количеством не считаются.</div>
+          <div class="estimate-hint">Количество — слитным «x5» в конце строки или как в смете: «- ед - количество» (шт, уп, кг, л, м, м²). Без него — 1 упаковка. Единицу можно поправить в списке. Размеры («Уголок 50 х 50») количеством не считаются.</div>
           <button id="addToEstimateList" class="heading" style="background:var(--surface); color:var(--text); border:1px solid var(--border); border-radius:14px; height:48px; padding:0 24px; font-weight:700; font-size:15px; cursor:pointer; flex-shrink:0;">Добавить в список</button>
         </div>
       </div>
@@ -307,6 +378,24 @@ function saveCustomStores(list) {
 let discountsMap = loadDiscounts();
 let customStores = loadCustomStores();
 
+// Стоимость доставки из каждого магазина (₽ за одну доставку) — участвует в смете:
+// иногда дешевле взять всё в одном месте, чем сэкономить 200 ₽ и заплатить за вторую доставку.
+const DELIVERY_KEY = 'stroyceny-delivery';
+function loadDelivery() {
+  try {
+    const raw = localStorage.getItem(DELIVERY_KEY);
+    if (raw) return JSON.parse(raw) || {};
+    // перенос из формата с несколькими сметами (промежуточная версия)
+    const book = JSON.parse(localStorage.getItem('stroyceny-estimates-v2') || 'null');
+    const project = book && Array.isArray(book.projects) && (book.projects.find(p => p.id === book.active) || book.projects[0]);
+    return (project && project.delivery) || {};
+  } catch {
+    return {};
+  }
+}
+function saveDelivery() { localStorage.setItem(DELIVERY_KEY, JSON.stringify(deliveryMap)); }
+let deliveryMap = loadDelivery();
+
 // Список магазинов грузим один раз. Скидки хранятся по slug, а не по названию:
 // переименование магазина в базе больше не обнуляло бы сохранённые скидки.
 let knownStores = [];
@@ -322,13 +411,39 @@ const storesReady = fetch('/api/stores')
 
 // Свежесть данных видна всегда, а не только в мета-строке после поиска:
 // "Строймир — 14 сентября, 22:18 · ТГ-Алтерра — 9 сентября, 19:01".
+// Если обход идёт прямо сейчас — вместо даты показываем прогресс: "обновляется, 125 из 407 категорий".
+let scrapeRuns = [];
 function renderStoreFreshness(stores) {
   const el = document.getElementById('storeFreshness');
   if (!el || !stores.length) return;
   // textContent — экранирование не нужно, иначе "&" в названии показался бы как "&amp;"
-  const parts = stores.map(s => `${s.name} — ${s.last_scraped_at ? formatDate(s.last_scraped_at) : 'ещё не собирался'}`);
+  const parts = stores.map(s => {
+    const run = scrapeRuns.find(r => r.store_slug === s.slug);
+    if (run && run.status === 'running') {
+      return `${s.name} — обновляется${run.total ? `, ${run.done} из ${run.total} категорий` : ''}`;
+    }
+    return `${s.name} — ${s.last_scraped_at ? formatDate(s.last_scraped_at) : 'ещё не собирался'}`;
+  });
   el.textContent = ' Последнее обновление: ' + parts.join(' · ') + '.';
 }
+
+async function pollScrapeStatus() {
+  try {
+    const resp = await fetch('/api/scrape-status');
+    if (!resp.ok) return;
+    scrapeRuns = await resp.json();
+    const stores = await storesReady;
+    if (scrapeRuns.some(r => r.status === 'running')) {
+      renderStoreFreshness(stores);
+      setTimeout(pollScrapeStatus, 60000);
+    } else {
+      // обход закончился — перечитать даты магазинов
+      const fresh = await fetch('/api/stores');
+      if (fresh.ok) { knownStores = await fresh.json(); renderStoreFreshness(knownStores); }
+    }
+  } catch { /* статус — не критичен */ }
+}
+storesReady.then(() => pollScrapeStatus());
 
 function migrateDiscountsToSlugs(stores) {
   const slugs = new Set(stores.map(s => s.slug));
@@ -356,21 +471,24 @@ async function renderDiscountsPanel() {
   const allNames = entries.map(e => e.label);
 
   const rows = entries.map(({ key, label, custom }) => {
-    const value = discountsMap[key] ?? '';
+    const percent = discountsMap[key] ?? '';
+    const delivery = deliveryMap[key] ?? '';
     // Магазин, добавленный вручную, удаляется целиком; у подключённого к парсеру
-    // удалять нечего — можно только убрать скидку, и кнопка появляется, если она задана.
-    const title = custom ? 'Удалить магазин' : 'Убрать скидку';
+    // удалять нечего — можно только сбросить его настройки, и кнопка появляется, если они есть.
+    const title = custom ? 'Удалить магазин' : 'Сбросить скидку и доставку';
+    const hasSettings = custom || percent !== '' || delivery !== '';
     return `<div class="discount-row">
       <span title="${escapeHtml(label)}">${escapeHtml(label)}</span>
-      <input type="number" min="0" max="90" step="1" data-store="${escapeHtml(key)}" value="${escapeHtml(value)}" placeholder="0">
+      <label class="field"><input type="number" min="0" max="90" step="1" data-store="${escapeHtml(key)}" value="${escapeHtml(percent)}" placeholder="0" aria-label="Скидка, %">%</label>
+      <label class="field"><input type="number" min="0" max="1000000" step="1" data-delivery="${escapeHtml(key)}" value="${escapeHtml(delivery)}" placeholder="0" aria-label="Доставка, ₽">₽</label>
       <button type="button" class="discount-remove" data-remove-store="${escapeHtml(key)}" data-custom="${custom ? '1' : ''}"
-        title="${title}" aria-label="${title}"${custom || value !== '' ? '' : ' hidden'}>×</button>
+        title="${title}" aria-label="${title}"${hasSettings ? '' : ' hidden'}>×</button>
     </div>`;
   }).join('');
 
   panel.innerHTML = `
-    <div class="title">Мои скидочные карты</div>
-    <div class="hint">Укажите вашу личную скидку (%) в каждом магазине — она учитывается при поиске и в смете.</div>
+    <div class="title">Мои магазины</div>
+    <div class="hint">Скидка по карте (%) и стоимость одной доставки (₽) — учитываются в поиске и в смете. 0 — самовывоз.</div>
     ${rows || '<div class="hint">Магазинов пока нет — добавьте вручную ниже.</div>'}
     <div class="discount-row" style="gap:6px;">
       <input type="text" id="newStoreName" placeholder="Название магазина" style="flex:1; min-width:0; padding:6px 8px; border:1px solid var(--border); border-radius:8px; background:var(--bg); color:var(--text); font-family:inherit; font-size:13px;">
@@ -379,37 +497,47 @@ async function renderDiscountsPanel() {
     </div>
     <button id="applyDiscountsBtn" class="apply-discounts-btn">Применить</button>`;
 
-  panel.querySelectorAll('input[data-store]').forEach(inp => {
-    inp.addEventListener('input', () => {
-      // Кнопка "убрать скидку" нужна только когда скидка действительно есть
-      const btn = inp.parentElement.querySelector('.discount-remove');
-      if (btn && !btn.dataset.custom) btn.hidden = inp.value.trim() === '';
-    });
-    inp.addEventListener('change', () => {
+  function readInputs() {
+    panel.querySelectorAll('input[data-store]').forEach(inp => {
       const percent = parseFloat(inp.value);
-      const store = inp.dataset.store;
-      if (!percent || percent <= 0) {
-        delete discountsMap[store];
-      } else {
-        discountsMap[store] = Math.min(percent, 90);
-      }
-      saveDiscounts(discountsMap);
+      if (!(percent > 0)) delete discountsMap[inp.dataset.store];
+      else discountsMap[inp.dataset.store] = Math.min(percent, 90);
     });
+    panel.querySelectorAll('input[data-delivery]').forEach(inp => {
+      const cost = parseFloat(inp.value);
+      if (!(cost > 0)) delete deliveryMap[inp.dataset.delivery];
+      else deliveryMap[inp.dataset.delivery] = Math.min(cost, 1000000);
+    });
+    saveDiscounts(discountsMap);
+    saveDelivery();
+  }
+
+  panel.querySelectorAll('input[data-store], input[data-delivery]').forEach(inp => {
+    inp.addEventListener('input', () => {
+      // Кнопка сброса нужна только когда что-то задано
+      const row = inp.closest('.discount-row');
+      const btn = row.querySelector('.discount-remove');
+      const anyValue = [...row.querySelectorAll('input')].some(i => i.value.trim() !== '');
+      if (btn && !btn.dataset.custom) btn.hidden = !anyValue;
+    });
+    inp.addEventListener('change', readInputs);
   });
 
   panel.querySelectorAll('.discount-remove').forEach(btn => {
     btn.addEventListener('click', () => {
       const key = btn.dataset.removeStore;
-      const hadDiscount = discountsMap[key] !== undefined;
+      const mattered = discountsMap[key] !== undefined || deliveryMap[key] !== undefined;
       delete discountsMap[key];
+      delete deliveryMap[key];
       if (btn.dataset.custom) {
         customStores = customStores.filter(name => name !== key);
         saveCustomStores(customStores);
       }
       saveDiscounts(discountsMap);
+      saveDelivery();
       renderDiscountsPanel();
-      // Цены в выдаче и в смете считались с этой скидкой — пересчитываем
-      if (hadDiscount) {
+      // Цены в выдаче и в смете считались с этими настройками — пересчитываем
+      if (mattered) {
         if (input.value.trim()) search();
         if (estimateList.length) calcEstimate();
       }
@@ -432,18 +560,9 @@ async function renderDiscountsPanel() {
   });
 
   document.getElementById('applyDiscountsBtn').addEventListener('click', () => {
-    panel.querySelectorAll('input[data-store]').forEach(inp => {
-      const percent = parseFloat(inp.value);
-      const store = inp.dataset.store;
-      if (!percent || percent <= 0) {
-        delete discountsMap[store];
-      } else {
-        discountsMap[store] = Math.min(percent, 90);
-      }
-    });
-    saveDiscounts(discountsMap);
+    readInputs();
     discountsPanel.hidden = true;
-    // Скидка меняет и выдачу, и смету — пересчитываем сразу, а не после ручного повтора.
+    // Скидка и доставка меняют и выдачу, и смету — пересчитываем сразу
     if (input.value.trim()) search();
     if (estimateList.length) calcEstimate();
   });
@@ -567,22 +686,57 @@ input.addEventListener('click', (e) => { e.stopPropagation(); renderHistoryDropd
 historyDropdown.addEventListener('click', (e) => e.stopPropagation());
 document.addEventListener('click', () => { historyDropdown.hidden = true; });
 
+// --- Фильтры: магазин, наличие, сортировка. Показываются после первого поиска. ---
+const filterRow = document.getElementById('filterRow');
+const filterStore = document.getElementById('filterStore');
+const filterStock = document.getElementById('filterStock');
+const filterSort = document.getElementById('filterSort');
+storesReady.then(stores => {
+  filterStore.innerHTML = '<option value="">Все магазины</option>' +
+    stores.map(s => `<option value="${escapeHtml(s.slug)}">${escapeHtml(s.name)}</option>`).join('');
+});
+filterStock.addEventListener('click', () => {
+  const on = !filterStock.classList.contains('on');
+  filterStock.classList.toggle('on', on);
+  filterStock.setAttribute('aria-pressed', String(on));
+  if (input.value.trim()) search();
+});
+filterStore.addEventListener('change', () => { if (input.value.trim()) search(); });
+filterSort.addEventListener('change', () => { if (input.value.trim()) search(); });
+
 let searchSeq = 0;
-async function search() {
+let shownItems = [];      // накопленные результаты (для «Показать ещё»)
+let shownBestIndex = null;
+let shownUnit = null;
+
+function pluralize(n, one, few, many) {
+  const mod10 = n % 10, mod100 = n % 100;
+  if (mod10 === 1 && mod100 !== 11) return one;
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return few;
+  return many;
+}
+
+async function search(options) {
+  const append = Boolean(options && options.append);
   const seq = ++searchSeq;
   const q = input.value.trim();
   if (!q) return;
   historyDropdown.hidden = true;
-  addToHistory(q);
-  results.innerHTML = '<div class="empty">Ищу...</div>';
-  metaLine.textContent = '';
+  if (!append) {
+    addToHistory(q);
+    results.innerHTML = '<div class="empty">Ищу...</div>';
+    metaLine.textContent = '';
+    shownItems = [];
+  }
 
   let data;
   try {
     await storesReady;  // скидки уходят на сервер по slug магазина
-    const params = new URLSearchParams({ q });
+    const params = new URLSearchParams({ q, offset: append ? shownItems.length : 0 });
     if (Object.keys(discountsMap).length) params.set('discounts', JSON.stringify(discountsMap));
-    if (window.appendSearchFilters) window.appendSearchFilters(params);
+    if (filterStore.value) params.set('store', filterStore.value);
+    if (filterStock.classList.contains('on')) params.set('stock_only', 'true');
+    if (filterSort.value !== 'relevance') params.set('sort', filterSort.value);
     const resp = await fetch('/api/search?' + params.toString());
     if (resp.status === 422) throw new Error('запрос не содержит ни слов, ни размеров');
     if (!resp.ok) throw new Error('сервер ответил ошибкой ' + resp.status);
@@ -595,9 +749,15 @@ async function search() {
   }
 
   if (seq !== searchSeq) return;
-  if (window.searchPageInfo) window.searchPageInfo(data);
-  const items = data.results || [];
+  filterRow.hidden = false;
+  const page = data.results || [];
   const maybeAlso = data.maybe_also || [];
+  if (!append) {
+    shownBestIndex = data.best_index;
+    shownUnit = data.comparison_unit;
+  }
+  shownItems = shownItems.concat(page);
+  const items = shownItems;
 
   if (!items.length && !maybeAlso.length) {
     results.innerHTML = '<div class="results-card"><div class="empty">Ничего не найдено</div></div>';
@@ -606,8 +766,10 @@ async function search() {
 
   if (items.length) {
     const storeCount = new Set(items.map(it => it.store)).size;
-    const latest = items.reduce((min, it) => it.scraped_at < min ? it.scraped_at : min, items[0].scraped_at);
-    metaLine.innerHTML = `<span>${items.length} предложени${items.length === 1 ? 'е' : items.length < 5 ? 'я' : 'й'}</span><span>·</span><span>${storeCount} магазин${storeCount === 1 ? '' : storeCount < 5 ? 'а' : 'ов'}</span><span>·</span><span>самые старые данные: ${formatDate(latest)}</span>`;
+    // Самая старая из показанных цен — честнее, чем самая свежая
+    const oldest = items.reduce((min, it) => it.scraped_at < min ? it.scraped_at : min, items[0].scraped_at);
+    const total = data.total ?? items.length;
+    metaLine.innerHTML = `<span>${total} ${pluralize(total, 'предложение', 'предложения', 'предложений')}</span><span>·</span><span>${storeCount} ${pluralize(storeCount, 'магазин', 'магазина', 'магазинов')}</span><span>·</span><span>цены от ${formatDate(oldest)}</span>`;
   } else {
     metaLine.textContent = '';
   }
@@ -624,8 +786,11 @@ async function search() {
   const noticeBlock = notices.map(text => `<div class="notice">${escapeHtml(text)}</div>`).join('');
 
   const mainBlock = items.length
-    ? `<div class="results-card">${renderResultRows(items, data.best_index, data.comparison_unit)}</div>`
+    ? `<div class="results-card">${renderResultRows(items, shownBestIndex, shownUnit)}</div>`
     : '<div class="results-card"><div class="empty">Точных совпадений не найдено</div></div>';
+
+  const moreBlock = data.has_more
+    ? `<button type="button" class="more-btn" id="moreBtn">Показать ещё (осталось ${data.total - items.length})</button>` : '';
 
   const maybeBlock = maybeAlso.length ? `
     <details style="margin-top:16px;">
@@ -633,7 +798,31 @@ async function search() {
       <div class="results-card" style="margin-top:10px;">${renderResultRows(maybeAlso, null, null)}</div>
     </details>` : '';
 
-  results.innerHTML = noticeBlock + mainBlock + maybeBlock;
+  results.innerHTML = noticeBlock + mainBlock + moreBlock + maybeBlock;
+  const moreBtn = document.getElementById('moreBtn');
+  if (moreBtn) moreBtn.addEventListener('click', () => { moreBtn.disabled = true; moreBtn.textContent = 'Загружаю…'; search({ append: true }); });
+}
+
+// История цены раскрывается прямо в карточке, без отдельного окна
+async function toggleHistory(btn) {
+  const row = btn.closest('.row');
+  const box = row.querySelector('.history-box');
+  if (!box.hidden) { box.hidden = true; btn.textContent = 'история цены'; return; }
+  btn.textContent = 'загружаю…';
+  try {
+    const resp = await fetch('/api/price-history?' + new URLSearchParams({ url: btn.dataset.url }));
+    if (!resp.ok) throw new Error('нет данных');
+    const data = await resp.json();
+    const rows = data.history.map(h => `<tr><td>${escapeHtml(formatDate(h.date))}</td><td class="num">${fmtMoney(h.price)} ₽</td></tr>`).join('');
+    box.innerHTML = (data.history.length > 1 ? '' : '<div>Пока известна одна цена — история копится с каждым обходом.</div>') +
+      `<table>${rows}</table>`;
+    box.hidden = false;
+    btn.textContent = 'скрыть историю';
+  } catch (err) {
+    box.innerHTML = `<div>Не удалось загрузить: ${escapeHtml(err.message)}</div>`;
+    box.hidden = false;
+    btn.textContent = 'история цены';
+  }
 }
 
 function renderResultRows(items, bestIndex, comparisonUnit) {
@@ -654,18 +843,22 @@ function renderResultRows(items, bestIndex, comparisonUnit) {
           ${stockChip(it)}
           ${it.category ? `<span class="chip">${escapeHtml(it.category)}</span>` : ''}
         </div>
+        <div class="history-box" hidden></div>
       </div>
       <div class="cta-row">
         <a href="${escapeHtml(it.url)}" target="_blank" rel="noopener" class="cta">В магазин</a>
         <button type="button" class="cta-ghost" data-add-to-estimate
           data-name="${escapeHtml(it.name)}" data-url="${escapeHtml(it.url)}"
           data-store="${escapeHtml(it.store)}">+ в смету</button>
+        <button type="button" class="link-btn" data-history data-url="${escapeHtml(it.url)}">история цены</button>
       </div>
     </div>`;
   }).join('');
 }
 
 results.addEventListener('click', (e) => {
+  const historyBtn = e.target.closest('[data-history]');
+  if (historyBtn) { toggleHistory(historyBtn); return; }
   const btn = e.target.closest('[data-add-to-estimate]');
   if (!btn) return;
   addPinnedToEstimate({
@@ -699,12 +892,15 @@ function normalizeItem(raw) {
   return {
     id: raw.id || ('q' + Date.now() + Math.random().toString(36).slice(2)),
     query: String(query),
-    qty_unit: raw.qty_unit || "уп",
+    qty_unit: QTY_UNITS.includes(raw.qty_unit) ? raw.qty_unit : 'уп',
     qty: Number(raw.qty) > 0 ? Number(raw.qty) : 1,
     url: (pinned && pinned.url) || raw.url || null,
     store: (pinned && pinned.store) || raw.store || null,
+    // "Цемент 50 кг": 50 кг — потребность или фасовка одного мешка? Пока не уточнили — подсказка в строке
+    needs_review: Boolean(raw.needs_review),
   };
 }
+const QTY_UNITS = ['уп', 'кг', 'л', 'м', 'м²', 'м³'];
 
 function loadEstimateList() {
   try {
@@ -782,9 +978,14 @@ function renderEstimateListBox() {
     <div class="est-item-row" data-id="${it.id}">
       <span class="est-item-name" title="${escapeHtml(it.query)}">${escapeHtml(it.query)}</span>
       ${it.url ? `<span class="est-item-pin">${escapeHtml(it.store || 'выбрано вручную')}</span>` : ''}
-      <input type="number" class="est-item-qty" data-qty-for="${it.id}" min="0.001" max="1000000" step="any" value="${it.qty}">
-      <select aria-label="Единица количества" data-unit-for="${it.id}">${["уп","кг","л","м","м²","м³"].map(u => `<option ${u === (it.qty_unit || "уп") ? "selected" : ""}>${u}</option>`).join("")}</select>
+      <input type="number" class="est-item-qty" data-qty-for="${it.id}" min="0.001" max="1000000" step="any" value="${it.qty}" aria-label="Количество">
+      <select class="est-item-unit" data-unit-for="${it.id}" aria-label="Единица количества">${QTY_UNITS.map(u => `<option value="${u}"${u === it.qty_unit ? ' selected' : ''}>${u}</option>`).join('')}</select>
       <button type="button" class="est-item-remove" data-remove="${it.id}" title="Убрать">×</button>
+      ${it.needs_review ? `<div class="est-item-review">
+        <span>«${escapeHtml(String(it.qty))} ${escapeHtml(it.qty_unit)}» — это сколько нужно или фасовка одной упаковки?</span>
+        <button type="button" class="link-btn" data-review-need="${it.id}">нужно ${escapeHtml(String(it.qty))} ${escapeHtml(it.qty_unit)}</button>
+        <button type="button" class="link-btn" data-review-pack="${it.id}">одна упаковка ${escapeHtml(String(it.qty))} ${escapeHtml(it.qty_unit)}</button>
+      </div>` : ''}
     </div>`).join('');
 
   estimateListBox.innerHTML = `<div class="results-card">${rows}</div>`;
@@ -797,13 +998,35 @@ estimateListBox.addEventListener('click', (e) => {
     saveEstimateList();
     renderEstimateListBox();
     calcEstimate();
+    return;
   }
+  // Уточнение неоднозначной строки: "50 кг" — потребность (оставляем как есть)
+  // или фасовка ("Цемент 50 кг" × 1 уп — тогда фасовка уходит в название товара)
+  const needId = e.target.closest('[data-review-need]')?.dataset.reviewNeed;
+  const packId = e.target.closest('[data-review-pack]')?.dataset.reviewPack;
+  const item = estimateList.find(it => it.id === (needId || packId));
+  if (!item) return;
+  if (packId) {
+    item.query = `${item.query} ${item.qty} ${item.qty_unit}`;
+    item.qty = 1;
+    item.qty_unit = 'уп';
+  }
+  item.needs_review = false;
+  saveEstimateList();
+  renderEstimateListBox();
+  calcEstimate();
 });
 estimateListBox.addEventListener('change', (e) => {
   const unitId = e.target.dataset.unitFor;
   if (unitId) {
     const item = estimateList.find(it => it.id === unitId);
-    if (item) { item.qty_unit = e.target.value; saveEstimateList(); calcEstimate(); }
+    if (item && QTY_UNITS.includes(e.target.value)) {
+      item.qty_unit = e.target.value;
+      item.needs_review = false;  // человек сам выбрал единицу — уточнять больше нечего
+      saveEstimateList();
+      renderEstimateListBox();
+      calcEstimate();
+    }
     return;
   }
   const qtyId = e.target.dataset.qtyFor;
@@ -840,31 +1063,27 @@ document.getElementById('addToEstimateList').addEventListener('click', async () 
     return;
   }
   if (!parsed.length) return;
-  window.previewParsedLines(parsed);
-});
 
-function acceptParsedLines(parsed) {
   parsed.forEach(p => {
     // такая же текстовая позиция уже есть в списке — суммируем количество, а не дублируем строку
-    const existing = estimateList.find(it => !it.url && (it.qty_unit || 'уп') === p.qty_unit && it.query.toLowerCase() === p.query.toLowerCase());
+    const existing = estimateList.find(it => !it.url && it.qty_unit === p.qty_unit && it.query.toLowerCase() === p.query.toLowerCase());
     if (existing) {
       existing.qty += p.qty;
     } else {
-      estimateList.push({
+      estimateList.push(normalizeItem({
         id: 'q' + Date.now() + Math.random().toString(36).slice(2),
         query: p.query,
         qty_unit: p.qty_unit,
         qty: p.qty,
-        url: null,
-        store: null,
-      });
+        needs_review: p.needs_review,
+      }));
     }
   });
   estimateInput.value = '';
   saveEstimateList();
   renderEstimateListBox();
   calcEstimate();
-}
+});
 
 renderEstimateListBox();
 if (estimateList.length) calcEstimate();  // список пережил перезагрузку страницы — сразу считаем
@@ -893,6 +1112,9 @@ function lineChips(best, extraChip) {
 
 function estimateLineHtml(line, item, extraChip) {
   const best = line.best;
+  const unit = line.qty_unit || 'уп';
+  // Потребность в единицах: показываем, во сколько упаковок она превратилась и сколько останется
+  const need = unit === 'уп' ? '' : `<div class="need">нужно ${fmtMoney(line.qty)} ${escapeHtml(unit)}${best.surplus > 0 ? ` · останется ${fmtMoney(best.surplus)} ${escapeHtml(unit)}` : ''}</div>`;
   return `
     <div class="est-line">
       <div class="mid-block">
@@ -900,8 +1122,10 @@ function estimateLineHtml(line, item, extraChip) {
         ${lineChips(best, extraChip)}
         ${editLineButton(item.id, line.query)}
       </div>
-      ${priceWithQty(best.line_total, best.packages)}
-      <div class="qty">Нужно: ${line.qty} ${escapeHtml(line.qty_unit || "уп")}<br>Остаток: ${fmtMoney(best.surplus)} ${escapeHtml(line.qty_unit || "уп")}</div>
+      <div>
+        ${priceWithQty(best.line_total, fmtMoney(best.packages) + ' уп')}
+        ${need}
+      </div>
     </div>`;
 }
 
@@ -932,10 +1156,42 @@ function missingLineHtml(line, item) {
 }
 
 let estimateCalcSeq = 0;
+let lastEstimateData = null;
+
+function estimateRequestBody() {
+  return {
+    // Закреплённые товары тоже считает бэкенд — по актуальной цене из базы и с той же скидкой
+    items: estimateList.map(it => ({ query: it.query, qty: it.qty, qty_unit: it.qty_unit, url: it.url || null })),
+    discounts: discountsMap,
+    delivery: deliveryMap,
+  };
+}
+
+// Скачивание сметы в Excel — тот же расчёт, что на экране, только в файле
+async function exportEstimateXlsx(btn) {
+  if (!estimateList.length) return;
+  const label = btn.textContent;
+  btn.disabled = true; btn.textContent = 'Готовлю…';
+  try {
+    const resp = await fetch('/api/export/xlsx', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(estimateRequestBody()),
+    });
+    if (!resp.ok) throw new Error('сервер ответил ошибкой ' + resp.status);
+    const url = URL.createObjectURL(await resp.blob());
+    const a = document.createElement('a');
+    a.href = url; a.download = `смета-${new Date().toISOString().slice(0, 10)}.xlsx`;
+    document.body.append(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 10000);
+  } catch (err) {
+    alert('Не удалось скачать: ' + err.message);
+  } finally {
+    btn.disabled = false; btn.textContent = label;
+  }
+}
 
 async function calcEstimate() {
   const seq = ++estimateCalcSeq;
-  window.lastEstimateData = null;
+  lastEstimateData = null;
 
   if (!estimateList.length) {
     estimateResults.innerHTML = '<div class="results-card"><div class="empty">Список пуст — добавьте позиции через текстовое поле или кнопкой «+ в смету» на найденных товарах</div></div>';
@@ -949,12 +1205,7 @@ async function calcEstimate() {
     const resp = await fetch('/api/estimate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        // Закреплённые товары тоже считает бэкенд — по актуальной цене из базы и с той же скидкой
-        items: estimateList.map(it => ({ query: it.query, qty: it.qty, qty_unit: it.qty_unit || "уп", url: it.url || null })),
-        delivery: window.getDelivery ? window.getDelivery() : {},
-        discounts: discountsMap,
-      }),
+      body: JSON.stringify(estimateRequestBody()),
     });
     if (!resp.ok) throw new Error('сервер ответил ошибкой ' + resp.status);
     data = await resp.json();
@@ -968,7 +1219,7 @@ async function calcEstimate() {
 
   // Бэкенд возвращает строки в том же порядке и с номером позиции, поэтому сопоставление
   // по тексту запроса (с очередью на случай дублей) больше не нужно.
-  window.lastEstimateData = data;
+  lastEstimateData = data;
   const compositionRows = data.lines.map(line => {
     const item = estimateList[line.index];
     if (!item) return '';
@@ -976,22 +1227,34 @@ async function calcEstimate() {
     return line.pinned ? pinnedLineHtml(line, item) : resolvedLineHtml(line, item);
   }).join('');
 
+  const withDelivery = data.delivery_total > 0;
+  const storeNames = (data.selected_stores || []).map(slug => (knownStores.find(s => s.slug === slug) || { name: slug }).name);
   const summary = `
     <div class="summary-card">
-      <span class="label">Итого по смете (${estimateList.length} поз.)</span>
+      <span class="label">Итого по смете (${estimateList.length} поз.)${withDelivery ? ' с доставкой' : ''}</span>
       <span class="total heading num">${fmtMoney(data.optimal_total, 0)} ₽</span>
-      ${data.savings_vs_single_store > 0 ? `<span class="label">Экономия с доставкой: ${fmtMoney(data.savings_vs_single_store)} ₽. Закреплённые товары сохраняют свой магазин</span>` : ''}
-      <span class="label">Товары: ${fmtMoney(data.goods_total)} ₽ · доставка: ${fmtMoney(data.delivery_total)} ₽</span>
-      ${data.pinned_total > 0 ? `<span class="label">Из них ${fmtMoney(data.pinned_total, 0)} ₽ — товары, выбранные вручную (включены во все варианты)</span>` : ''}
+      ${withDelivery ? `<span class="label">Товары ${fmtMoney(data.goods_total, 0)} ₽ + доставка ${fmtMoney(data.delivery_total, 0)} ₽</span>` : ''}
+      ${storeNames.length > 1 ? `<span class="label">Покупать в: ${escapeHtml(storeNames.join(', '))}</span>` : ''}
+      ${data.savings_vs_single_store > 0 ? `<span class="label">Экономия ${fmtMoney(data.savings_vs_single_store, 0)} ₽ по сравнению с покупкой всего в одном магазине</span>` : ''}
+      ${data.pinned_total > 0 ? `<span class="label">Из них ${fmtMoney(data.pinned_total, 0)} ₽ — товары, выбранные вручную</span>` : ''}
       ${data.unresolved.length ? `<span class="label">Не учтено позиций: ${data.unresolved.length}</span>` : ''}
+    </div>`;
+
+  const actions = `
+    <div class="est-actions">
+      <span class="section-label">Результат</span>
+      <span class="group">
+        <button type="button" class="cta-ghost" id="exportXlsxBtn">Скачать Excel</button>
+        <button type="button" class="cta-ghost" id="printBtn">Печать</button>
+      </span>
     </div>`;
 
   const storeOptionsBlock = data.store_options.length ? `
     <div>
-      <div class="section-label" style="margin-bottom:10px;">Варианты закупки с доставкой${data.pinned_total > 0 ? ' (закреплённые товары сохраняются)' : ''}</div>
+      <div class="section-label" style="margin-bottom:10px;">Если покупать всё в одном магазине${withDelivery ? ' (с доставкой)' : ''}${data.pinned_total > 0 ? ' — кроме выбранных вручную' : ''}</div>
       <div class="results-card">${data.store_options.map(o => `
         <div class="store-option">
-          <span><span class="store-dot" style="background:${storeColor(o.store)}; display:inline-flex; margin-right:8px;">${escapeHtml(o.store[0])}</span>${escapeHtml(o.store)}${o.discount_percent > 0 ? ` <span class="discount-badge">−${o.discount_percent}%</span>` : ''}</span>
+          <span><span class="store-dot" style="background:${storeColor(o.store)}; display:inline-flex; margin-right:8px;">${escapeHtml(o.store[0])}</span>${escapeHtml(o.store)}${o.discount_percent > 0 ? ` <span class="discount-badge">−${o.discount_percent}%</span>` : ''}${o.delivery_total > 0 ? `<span class="sub">доставка ${fmtMoney(o.delivery_total, 0)} ₽</span>` : ''}</span>
           ${o.complete
             ? `<span class="price heading num" style="font-size:16px;">${fmtMoney(o.total, 0)} ₽</span>`
             : `<span class="badge-incomplete">нет в наличии: ${escapeHtml(o.missing.join(', '))}</span>`}
@@ -999,12 +1262,15 @@ async function calcEstimate() {
     </div>` : '';
 
   estimateResults.innerHTML = `
+    ${actions}
     ${summary}
     <div>
       <div class="section-label" style="margin-bottom:10px;">Состав закупки</div>
       <div class="results-card">${compositionRows}</div>
     </div>
     ${storeOptionsBlock}`;
+  document.getElementById('exportXlsxBtn').addEventListener('click', (e) => exportEstimateXlsx(e.currentTarget));
+  document.getElementById('printBtn').addEventListener('click', () => window.print());
 }
 
 estimateResults.addEventListener('click', (e) => {
@@ -1016,6 +1282,5 @@ estimateResults.addEventListener('click', (e) => {
   search();
 });
 </script>
-<script src="/static/features.js"></script>
 </body>
 </html>
