@@ -46,6 +46,8 @@ class StroymirScraper(BaseScraper):
         text = tag.get_text(" ", strip=True).lower()
         if not text:
             return None, None
+        if any(word in text for word in ("нет", "отсутств", "под заказ", "ожида")):
+            return False, text
         if "склад" in text or "налич" in text:
             return True, text
         return False, text
@@ -53,11 +55,12 @@ class StroymirScraper(BaseScraper):
     def fetch_products(self) -> list[ProductRecord]:
         products: list[ProductRecord] = []
         seen_urls: set[str] = set()
-        for path in self.category_paths:
+        for number, path in enumerate(self.category_paths, 1):
             for record in self._fetch_category(path):
                 if record.url not in seen_urls:
                     seen_urls.add(record.url)
                     products.append(record)
+            self.on_progress(number, len(self.category_paths), len(products))
         return products
 
     def _fetch_category(self, path: str) -> list[ProductRecord]:
@@ -75,9 +78,11 @@ class StroymirScraper(BaseScraper):
             try:
                 response = self._get(url)
             except DisallowedByRobots:
+                self.mark_incomplete(url)
                 logger.info("robots.txt запрещает %s — категория собрана частично", url)
                 break
             except Exception:
+                self.mark_incomplete(url)
                 logger.exception("не удалось загрузить %s", url)
                 break
             soup = BeautifulSoup(response.text, "lxml")
@@ -88,6 +93,7 @@ class StroymirScraper(BaseScraper):
 
             cards = soup.select("div.product-thumb")
             if not cards:
+                self.mark_incomplete(url + ": no product cards")
                 break
 
             for card in cards:
@@ -124,6 +130,7 @@ class StroymirScraper(BaseScraper):
             page += 1
 
         if truncated:
+            self.mark_incomplete(path + ": page limit")
             logger.warning("%s: достигнут лимит в %d страниц", category_name or path, self.max_pages_per_category)
         logger.info("%s: %d товаров", category_name or path, len(products))
         return products

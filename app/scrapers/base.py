@@ -40,9 +40,16 @@ class BaseScraper:
     cookies: dict[str, str] = {}
 
     def __init__(self) -> None:
+        self.complete = True
+        self.errors: list[str] = []
+        self.on_progress = lambda done, total, count: None
         self._robots: RobotFileParser | None = None
         self._robots_loaded = False
         self._last_request_at = 0.0
+
+    def mark_incomplete(self, message: str) -> None:
+        self.complete = False
+        self.errors.append(message)
 
     def fetch_products(self) -> list[ProductRecord]:
         raise NotImplementedError

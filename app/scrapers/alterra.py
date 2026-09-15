@@ -85,6 +85,7 @@ class AlterraScraper(BaseScraper):
                 if record.url not in seen_urls:
                     seen_urls.add(record.url)
                     products.append(record)
+            self.on_progress(number, len(category_paths), len(products))
             # Обход 400 подкатегорий занимает десятки минут: без отметок прогресса
             # непонятно, идёт работа или процесс завис.
             if number % 25 == 0 or number == len(category_paths):
@@ -106,9 +107,11 @@ class AlterraScraper(BaseScraper):
                 response = self._get(url)
             except DisallowedByRobots:
                 # Ожидаемо для страниц 2+: сайт запрещает индексацию параметра пагинации.
+                self.mark_incomplete(url)
                 self._pagination_blocked = True
                 break
             except Exception:
+                self.mark_incomplete(url)
                 logger.exception("не удалось загрузить %s", url)
                 break
 
@@ -120,9 +123,13 @@ class AlterraScraper(BaseScraper):
             page_products = self._parse_cards(soup, category_name)
             new_products = [p for p in page_products if p.url not in seen_urls]
             if not new_products:
+                if page == 1:
+                    self.mark_incomplete(url + ": no products")
                 break
             seen_urls.update(p.url for p in new_products)
             products.extend(new_products)
+        else:
+            self.mark_incomplete(base + ": page limit")
 
         return products
 

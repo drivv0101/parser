@@ -1,0 +1,5 @@
+# Единые переводы строк независимо от редактора и ОС: LF в исходниках,
+# CRLF только у bat-файла — так надёжнее для cmd.exe
+* text=auto eol=lf
+*.bat text eol=crlf
+*.db binary

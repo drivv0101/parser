@@ -7,7 +7,7 @@ from datetime import UTC, datetime
 from app.db import DB_PATH, get_session, init_db
 from app.logging_config import get_logger, setup_logging
 from app.matching import derive_pack, extract_dimensions, unit_price, validate_price
-from app.models import Product, Store
+from app.models import Product, Store, PriceHistory, ScrapeRun
 from app.scrapers import SCRAPERS
 
 logger = get_logger("run_scrape")
@@ -83,9 +83,40 @@ def run_store(slug: str) -> int:
 
 
 def _run_store_locked(slug: str) -> int:
+    session = get_session()
+    run = ScrapeRun(store_slug=slug, started_at=datetime.now(UTC).replace(tzinfo=None), status="running")
+    session.add(run)
+    session.commit()
+    run_id = run.id
+    session.close()
+    try:
+        return _collect_store(slug, run_id)
+    except Exception as exc:
+        session = get_session()
+        try:
+            run = session.get(ScrapeRun, run_id)
+            run.status = "failed"
+            run.message = str(exc)[:2000]
+            run.finished_at = datetime.now(UTC).replace(tzinfo=None)
+            session.commit()
+        finally:
+            session.close()
+        raise
+
+
+def _collect_store(slug: str, run_id: int) -> int:
     scraper_cls = SCRAPERS[slug]
     scraper = scraper_cls()
     logger.info("[%s] обход %s ...", slug, scraper.base_url)
+    def progress(done, total, count):
+        session = get_session()
+        try:
+            run = session.get(ScrapeRun, run_id)
+            run.completed_categories, run.total_categories, run.product_count = done, total, count
+            session.commit()
+        finally:
+            session.close()
+    scraper.on_progress = progress
     records = scraper.fetch_products()
     logger.info("[%s] получено %d товаров", slug, len(records))
 
@@ -117,7 +148,7 @@ def _run_store_locked(slug: str) -> int:
             product.url: product for product in session.query(Product).filter_by(store_id=store.id)
         }
 
-        known_before = len(existing_by_url)
+        known_before = sum(1 for p in existing_by_url.values() if p.is_active)
         seen_urls: set[str] = set()
         for record in valid_records:
             product = existing_by_url.get(record.url)
@@ -125,11 +156,18 @@ def _run_store_locked(slug: str) -> int:
                 product = Product(store_id=store.id, url=record.url)
                 session.add(product)
                 existing_by_url[record.url] = product
+            previous_price, previous_time = product.price, product.scraped_at
             _apply_record(product, record, now)
+            session.flush()
+            if previous_price is not None and not session.query(PriceHistory.id).filter_by(product_id=product.id).first():
+                session.add(PriceHistory(product_id=product.id, price=previous_price, recorded_at=previous_time))
+            if previous_price is None or previous_price != record.price:
+                session.add(PriceHistory(product_id=product.id, price=record.price, recorded_at=now))
             seen_urls.add(record.url)
 
         disappeared = [p for url, p in existing_by_url.items() if url not in seen_urls and p.is_active]
-        if known_before and len(seen_urls) < known_before * MIN_COVERAGE_RATIO:
+        if not scraper.complete or (known_before and len(seen_urls) < known_before * MIN_COVERAGE_RATIO):
+            scraper.complete = False
             logger.warning(
                 "[%s] собрано %d товаров при %d известных — похоже на сбой разметки, "
                 "пропавшие товары НЕ деактивируем",
@@ -141,7 +179,13 @@ def _run_store_locked(slug: str) -> int:
             if disappeared:
                 logger.info("[%s] пропали из каталога и скрыты из выдачи: %d", slug, len(disappeared))
 
-        store.last_scraped_at = now
+        if scraper.complete:
+            store.last_scraped_at = now
+        run = session.get(ScrapeRun, run_id)
+        run.status = "success" if scraper.complete else "partial"
+        run.product_count = len(seen_urls)
+        run.message = "; ".join(scraper.errors)[:2000] or (None if scraper.complete else "Получен неполный каталог; старые товары сохранены")
+        run.finished_at = now
         session.commit()
         logger.info("[%s] сохранено в базу: %d активных товаров", slug, len(seen_urls))
         return len(seen_urls)

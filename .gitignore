@@ -6,6 +6,8 @@ prices.db-shm
 *.db-wal
 *.db-shm
 *.backup
+# Замок обхода (app/run_scrape.py) — живёт только пока идёт прогон
+*.scrape.lock
 
 logs/
 

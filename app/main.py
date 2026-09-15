@@ -25,8 +25,9 @@ from app.matching import (
     parse_estimate_text,
     parse_query,
     sold_by_weight,
+    material_signature,
 )
-from app.models import Product, Store
+from app.models import Product, Store, PriceHistory, ScrapeRun
 from app.run_scrape import run_all, run_store
 from app.scrapers import SCRAPERS
 
@@ -170,7 +171,7 @@ def _query_products(session: Session, keywords: list[str], parsed: ParsedQuery, 
     if dims.thickness_mm is not None:
         query = query.filter(Product.thickness_mm.between(dims.thickness_mm - tolerance, dims.thickness_mm + tolerance))
 
-    return query.order_by(Product.price.asc()).limit(limit).all()
+    return query.order_by(Product.price.asc()).all()
 
 
 def find_matches(session: Session, q: str, limit: int = 500) -> Matches:
@@ -317,6 +318,15 @@ def _best_index(items: list[dict], unit: str | None) -> int | None:
 def search(
     q: str = Query(..., min_length=1, max_length=MAX_QUERY_LEN),
     discounts: str | None = None,
+    store: str = "",
+    category: str = "",
+    stock_only: bool = False,
+    pack_unit: str = "",
+    min_price: float = 0,
+    max_price: float | None = None,
+    sort: str = "relevance",
+    offset: int = 0,
+    exact: bool = False,
 ) -> dict:
     parsed_discounts = None
     if discounts:
@@ -333,6 +343,15 @@ def search(
             raise HTTPException(status_code=422, detail="Запрос не содержит ни слов, ни размеров")
 
         keywords = matches.keywords
+        if exact and matches.relaxed:
+            matches.products = []
+        matches.products = [p for p in matches.products
+            if (not store or p.store.slug == store)
+            and (not category or category.lower() in (p.category or "").lower())
+            and (not stock_only or p.in_stock is True)
+            and (not pack_unit or p.pack_unit == pack_unit)
+            and _effective_price(p.price, p.store.slug, discount_map) >= min_price
+            and (max_price is None or _effective_price(p.price, p.store.slug, discount_map) <= max_price)]
         ranked = sorted(
             ((_product_to_dict(p, discount_map), p) for p in matches.products),
             key=lambda pair: (
@@ -343,17 +362,26 @@ def search(
             ),
         )
 
-        results = [it for it, p in ranked if _relevance_tier(p, keywords) == 0][:100]
+        if sort in {"price", "unit_price"}:
+            ranked.sort(key=lambda pair: (pair[0].get(sort if sort == "unit_price" else "effective_price") or float("inf")))
+        offset = max(0, offset)
+        main_ranked = [(it, p) for it, p in ranked if _relevance_tier(p, keywords) == 0]
+        results = [it for it, p in main_ranked[offset:offset + 100]]
         maybe_also = [it for it, p in ranked if _relevance_tier(p, keywords) != 0][:20]
-
         # Запрос без слов ("16 мм") возвращает разнородный список: изолента, труба, кабель.
         # Сравнивать их между собой по ₽/м бессмысленно, поэтому бейджа там нет.
-        unit = dominant_pack_unit([p for it, p in ranked if _relevance_tier(p, keywords) == 0][:100]) if keywords else None
+        unit = dominant_pack_unit([p for it, p in main_ranked]) if keywords else None
+        # Разные названия (марки, бренды) — повод предупредить, а не отказаться сравнивать:
+        # "где дешевле похожий товар" и есть задача сервиса, а марку человек видит в названии.
+        mixed = len({material_signature(p) for it, p in main_ranked}) > 1
         return {
+            "total": len(main_ranked),
+            "has_more": offset + len(results) < len(main_ranked),
             "results": results,
             "maybe_also": maybe_also,
             "relaxed": matches.relaxed,
             "comparison_unit": unit,
+            "mixed_materials": mixed,
             "best_index": _best_index(results, unit),
         }
     finally:
@@ -371,6 +399,7 @@ class EstimateItem(BaseModel):
     # Закреплённый пользователем товар: считаем по актуальной цене из базы, а не по
     # снимку, сохранённому в браузере месяц назад.
     url: str | None = None
+    qty_unit: str = Field(default="уп", pattern="^(уп|кг|л|м|м²|м³)$")
 
 
 class EstimateRequest(BaseModel):
@@ -378,6 +407,7 @@ class EstimateRequest(BaseModel):
 
     items: list[EstimateItem] = Field(default_factory=list, max_length=MAX_ESTIMATE_ITEMS)
     discounts: dict[str, float] = Field(default_factory=dict)
+    delivery: dict[str, float] = Field(default_factory=dict)
 
 
 class ParseLinesRequest(BaseModel):
@@ -389,7 +419,7 @@ def parse_lines(req: ParseLinesRequest) -> dict:
     """Разбор вставленной сметы на позиции. Живёт на бэкенде, чтобы количество и размеры
     разбирал один и тот же код (раньше JS на фронте читал "Уголок 50 х 50" как 50 штук)."""
     lines = parse_estimate_text(req.text)[:MAX_ESTIMATE_ITEMS]
-    return {"items": [{"query": line.query, "qty": line.qty} for line in lines]}
+    return {"items": [{"query": line.query, "qty": line.qty, "qty_unit": line.qty_unit, "needs_review": line.needs_review} for line in lines]}
 
 
 def _pinned_product(session: Session, url: str) -> Product | None:
@@ -437,109 +467,8 @@ def _line_key(product: Product, keywords: list[str], unit: str | None, typical: 
 
 @app.post("/api/estimate")
 def estimate(req: EstimateRequest) -> dict:
-    logger.info("estimate: %d позиций, скидки=%s", len(req.items), req.discounts)
-    discount_map = _clean_discounts(req.discounts)
-    session = get_session()
-    try:
-        lines: list[dict] = []
-
-        for index, item in enumerate(req.items):
-            base = {"index": index, "query": item.query, "qty": item.qty}
-
-            if item.url:
-                product = _pinned_product(session, item.url)
-                if product is None:
-                    lines.append({**base, "status": "unavailable", "pinned": True, "best": None, "by_store": {}})
-                    continue
-                best = _product_to_dict(product, discount_map)
-                lines.append({
-                    **base,
-                    "status": "ok",
-                    "pinned": True,
-                    "best": {**best, "line_total": round(best["effective_price"] * item.qty, 2)},
-                    "by_store": {},
-                })
-                continue
-
-            matches = find_matches(session, item.query, limit=500)
-            if not matches.products:
-                lines.append({**base, "status": "not_found", "pinned": False, "best": None, "by_store": {}})
-                continue
-
-            keywords = matches.keywords
-            # Сопоставимость считаем по релевантным товарам: в выдаче по "цемент" есть ещё
-            # наличники и кирпич с упоминанием цемента, и они бы размыли долю мешков.
-            relevant = [p for p in matches.products if _relevance_tier(p, keywords) == 0] or matches.products
-            unit = dominant_pack_unit(relevant)
-            typical = typical_pack_value(relevant, unit)
-
-            best_per_store: dict[str, Product] = {}
-            for product in matches.products:
-                slug = product.store.slug
-                current = best_per_store.get(slug)
-                if current is None or _line_key(product, keywords, unit, typical) < _line_key(current, keywords, unit, typical):
-                    best_per_store[slug] = product
-
-            def line_total(product: Product) -> float:
-                return round(_effective_price(product.price, product.store.slug, discount_map) * item.qty, 2)
-
-            best_overall = min(
-                best_per_store.values(),
-                key=lambda p: (
-                    _relevance_tier(p, keywords), -_matched_words(p, keywords),
-                    _availability_rank(p), line_total(p),
-                ),
-            )
-            lines.append({
-                **base,
-                "status": "ok",
-                "pinned": False,
-                "relaxed": matches.relaxed,
-                "best": {**_product_to_dict(best_overall, discount_map), "line_total": line_total(best_overall)},
-                "by_store": {
-                    slug: {**_product_to_dict(p, discount_map), "line_total": line_total(p)}
-                    for slug, p in best_per_store.items()
-                },
-            })
-
-        optimal_total = round(sum(line["best"]["line_total"] for line in lines if line["best"]), 2)
-        unresolved = [line["query"] for line in lines if line["status"] != "ok"]
-
-        # Сравнение "всё в одном магазине" считается только по автоподобранным позициям:
-        # закреплённые вручную товары привязаны к конкретному магазину и выбор не меняют.
-        comparable_lines = [line for line in lines if line["status"] == "ok" and not line["pinned"]]
-        pinned_total = round(sum(line["best"]["line_total"] for line in lines if line["pinned"] and line["best"]), 2)
-
-        all_slugs = sorted({slug for line in comparable_lines for slug in line["by_store"]})
-        store_names = {s.slug: s.name for s in session.query(Store).all()}
-        store_options = []
-        for slug in all_slugs:
-            covered = [line for line in comparable_lines if slug in line["by_store"]]
-            missing = [line["query"] for line in comparable_lines if slug not in line["by_store"]]
-            store_options.append({
-                "store": store_names.get(slug, slug),
-                "store_slug": slug,
-                "total": round(sum(line["by_store"][slug]["line_total"] for line in covered), 2),
-                "discount_percent": discount_map.get(slug, 0),
-                "complete": not missing,
-                "missing": missing,
-            })
-        store_options.sort(key=lambda o: (not o["complete"], o["total"]))
-
-        best_complete = next((o for o in store_options if o["complete"]), None)
-        comparable_optimal = round(sum(line["best"]["line_total"] for line in comparable_lines), 2)
-        savings = round(best_complete["total"] - comparable_optimal, 2) if best_complete else None
-
-        return {
-            "lines": lines,
-            "unresolved": unresolved,
-            "optimal_total": optimal_total,
-            "pinned_total": pinned_total,
-            "store_options": store_options,
-            "savings_vs_single_store": savings,
-        }
-    finally:
-        session.close()
+    from app.estimates import calculate
+    return calculate(req)
 
 
 # --- Ручное обновление --------------------------------------------------------
@@ -588,3 +517,56 @@ def refresh(slug: str, request: Request, background: BackgroundTasks) -> dict:
 
     background.add_task(_run_store_guarded, slug)
     return {"status": "started", "store": slug}
+
+
+@app.get("/api/scrape-status")
+def scrape_status():
+    session = get_session()
+    try:
+        result = []
+        for slug in SCRAPERS:
+            run = session.query(ScrapeRun).filter_by(store_slug=slug).order_by(ScrapeRun.id.desc()).first()
+            result.append({"store_slug": slug, "status": run.status if run else "unknown",
+                "started_at": _utc_iso(run.started_at) if run else None,
+                "finished_at": _utc_iso(run.finished_at) if run else None,
+                "done": run.completed_categories if run else 0,
+                "total": run.total_categories if run else 0,
+                "products": run.product_count if run else 0,
+                "message": run.message if run else None})
+        return result
+    finally:
+        session.close()
+
+
+@app.get("/api/price-history")
+def price_history(url: str):
+    session = get_session()
+    try:
+        product = session.query(Product).filter_by(url=url).first()
+        if not product:
+            raise HTTPException(404, "Товар не найден")
+        rows = session.query(PriceHistory).filter_by(product_id=product.id).order_by(PriceHistory.recorded_at.desc()).limit(365).all()
+        values = [{"price": row.price, "date": _utc_iso(row.recorded_at)} for row in reversed(rows)]
+        if not values:
+            values = [{"price": product.price, "date": _utc_iso(product.scraped_at)}]
+        return {"name": product.name, "active": product.is_active, "history": values}
+    finally:
+        session.close()
+
+
+@app.get("/api/categories")
+def categories():
+    session = get_session()
+    try:
+        return [r[0] for r in session.query(Product.category).filter(Product.is_active.is_(True), Product.category.isnot(None)).distinct().order_by(Product.category).all()]
+    finally:
+        session.close()
+
+
+@app.post("/api/export/xlsx")
+def export_xlsx(req: EstimateRequest):
+    from fastapi.responses import Response
+    from app.exporting import workbook
+    return Response(workbook(estimate(req)),
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": 'attachment; filename="estimate.xlsx"'})

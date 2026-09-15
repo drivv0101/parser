@@ -213,7 +213,7 @@
       <div style="display:flex; flex-direction:column; gap:10px;">
         <textarea id="estimateInput" class="estimate-input" placeholder="По одной позиции на строку — можно вставить прямо из своей сметы (Excel), например:&#10;ДСП 1,22х2,44х16 x10&#10;Цемент М500 - меш - 40&#10;Кирпич керамический - шт - 1500&#10;Перфоратор"></textarea>
         <div style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
-          <div class="estimate-hint">Количество — слитным «x5» в конце строки или как в смете: «- ед - количество». Без него считаем 1 шт. Размеры («Уголок 50 х 50») количеством не считаются.</div>
+          <div class="estimate-hint">Перед добавлением проверьте количество и единицу. «уп» — целая упаковка или штука. Количество — слитным «x5» в конце строки или как в смете: «- ед - количество». Без него считаем 1 шт. Размеры («Уголок 50 х 50») количеством не считаются.</div>
           <button id="addToEstimateList" class="heading" style="background:var(--surface); color:var(--text); border:1px solid var(--border); border-radius:14px; height:48px; padding:0 24px; font-weight:700; font-size:15px; cursor:pointer; flex-shrink:0;">Добавить в список</button>
         </div>
       </div>
@@ -567,7 +567,9 @@ input.addEventListener('click', (e) => { e.stopPropagation(); renderHistoryDropd
 historyDropdown.addEventListener('click', (e) => e.stopPropagation());
 document.addEventListener('click', () => { historyDropdown.hidden = true; });
 
+let searchSeq = 0;
 async function search() {
+  const seq = ++searchSeq;
   const q = input.value.trim();
   if (!q) return;
   historyDropdown.hidden = true;
@@ -580,16 +582,20 @@ async function search() {
     await storesReady;  // скидки уходят на сервер по slug магазина
     const params = new URLSearchParams({ q });
     if (Object.keys(discountsMap).length) params.set('discounts', JSON.stringify(discountsMap));
+    if (window.appendSearchFilters) window.appendSearchFilters(params);
     const resp = await fetch('/api/search?' + params.toString());
     if (resp.status === 422) throw new Error('запрос не содержит ни слов, ни размеров');
     if (!resp.ok) throw new Error('сервер ответил ошибкой ' + resp.status);
     data = await resp.json();
   } catch (err) {
+    if (seq !== searchSeq) return;
     console.error('search failed', err);
     results.innerHTML = `<div class="results-card"><div class="empty">Не удалось выполнить поиск: ${escapeHtml(err.message)}</div></div>`;
     return;
   }
 
+  if (seq !== searchSeq) return;
+  if (window.searchPageInfo) window.searchPageInfo(data);
   const items = data.results || [];
   const maybeAlso = data.maybe_also || [];
 
@@ -600,8 +606,8 @@ async function search() {
 
   if (items.length) {
     const storeCount = new Set(items.map(it => it.store)).size;
-    const latest = items.reduce((max, it) => it.scraped_at > max ? it.scraped_at : max, items[0].scraped_at);
-    metaLine.innerHTML = `<span>${items.length} предложени${items.length === 1 ? 'е' : items.length < 5 ? 'я' : 'й'}</span><span>·</span><span>${storeCount} магазин${storeCount === 1 ? '' : storeCount < 5 ? 'а' : 'ов'}</span><span>·</span><span>обновлено ${formatDate(latest)}</span>`;
+    const latest = items.reduce((min, it) => it.scraped_at < min ? it.scraped_at : min, items[0].scraped_at);
+    metaLine.innerHTML = `<span>${items.length} предложени${items.length === 1 ? 'е' : items.length < 5 ? 'я' : 'й'}</span><span>·</span><span>${storeCount} магазин${storeCount === 1 ? '' : storeCount < 5 ? 'а' : 'ов'}</span><span>·</span><span>самые старые данные: ${formatDate(latest)}</span>`;
   } else {
     metaLine.textContent = '';
   }
@@ -612,6 +618,8 @@ async function search() {
   }
   if (items.length > 1 && data.best_index === null) {
     notices.push('Эти товары продаются поштучно или фасовка у них разная, поэтому «лучшая цена» не выделена — сравнить их одной цифрой нельзя.');
+  } else if (items.length > 1 && data.mixed_materials) {
+    notices.push('Названия различаются (марка, бренд, сорт) — «лучшая цена» считается за единицу, сверьте характеристики перед покупкой.');
   }
   const noticeBlock = notices.map(text => `<div class="notice">${escapeHtml(text)}</div>`).join('');
 
@@ -691,6 +699,7 @@ function normalizeItem(raw) {
   return {
     id: raw.id || ('q' + Date.now() + Math.random().toString(36).slice(2)),
     query: String(query),
+    qty_unit: raw.qty_unit || "уп",
     qty: Number(raw.qty) > 0 ? Number(raw.qty) : 1,
     url: (pinned && pinned.url) || raw.url || null,
     store: (pinned && pinned.store) || raw.store || null,
@@ -773,7 +782,8 @@ function renderEstimateListBox() {
     <div class="est-item-row" data-id="${it.id}">
       <span class="est-item-name" title="${escapeHtml(it.query)}">${escapeHtml(it.query)}</span>
       ${it.url ? `<span class="est-item-pin">${escapeHtml(it.store || 'выбрано вручную')}</span>` : ''}
-      <input type="number" class="est-item-qty" data-qty-for="${it.id}" min="0.1" step="1" value="${it.qty}">
+      <input type="number" class="est-item-qty" data-qty-for="${it.id}" min="0.001" max="1000000" step="any" value="${it.qty}">
+      <select aria-label="Единица количества" data-unit-for="${it.id}">${["уп","кг","л","м","м²","м³"].map(u => `<option ${u === (it.qty_unit || "уп") ? "selected" : ""}>${u}</option>`).join("")}</select>
       <button type="button" class="est-item-remove" data-remove="${it.id}" title="Убрать">×</button>
     </div>`).join('');
 
@@ -790,12 +800,18 @@ estimateListBox.addEventListener('click', (e) => {
   }
 });
 estimateListBox.addEventListener('change', (e) => {
+  const unitId = e.target.dataset.unitFor;
+  if (unitId) {
+    const item = estimateList.find(it => it.id === unitId);
+    if (item) { item.qty_unit = e.target.value; saveEstimateList(); calcEstimate(); }
+    return;
+  }
   const qtyId = e.target.dataset.qtyFor;
   if (!qtyId) return;
   const item = estimateList.find(it => it.id === qtyId);
   if (!item) return;
   const qty = parseFloat(e.target.value);
-  if (!(qty > 0)) {
+  if (!(qty > 0) || !Number.isFinite(qty) || qty > 1000000) {
     e.target.value = item.qty;  // иначе поле показывало бы значение, которого нет в расчёте
     return;
   }
@@ -824,16 +840,20 @@ document.getElementById('addToEstimateList').addEventListener('click', async () 
     return;
   }
   if (!parsed.length) return;
+  window.previewParsedLines(parsed);
+});
 
+function acceptParsedLines(parsed) {
   parsed.forEach(p => {
     // такая же текстовая позиция уже есть в списке — суммируем количество, а не дублируем строку
-    const existing = estimateList.find(it => !it.url && it.query.toLowerCase() === p.query.toLowerCase());
+    const existing = estimateList.find(it => !it.url && (it.qty_unit || 'уп') === p.qty_unit && it.query.toLowerCase() === p.query.toLowerCase());
     if (existing) {
       existing.qty += p.qty;
     } else {
       estimateList.push({
         id: 'q' + Date.now() + Math.random().toString(36).slice(2),
         query: p.query,
+        qty_unit: p.qty_unit,
         qty: p.qty,
         url: null,
         store: null,
@@ -844,7 +864,7 @@ document.getElementById('addToEstimateList').addEventListener('click', async () 
   saveEstimateList();
   renderEstimateListBox();
   calcEstimate();
-});
+}
 
 renderEstimateListBox();
 if (estimateList.length) calcEstimate();  // список пережил перезагрузку страницы — сразу считаем
@@ -880,7 +900,8 @@ function estimateLineHtml(line, item, extraChip) {
         ${lineChips(best, extraChip)}
         ${editLineButton(item.id, line.query)}
       </div>
-      ${priceWithQty(best.line_total, line.qty)}
+      ${priceWithQty(best.line_total, best.packages)}
+      <div class="qty">Нужно: ${line.qty} ${escapeHtml(line.qty_unit || "уп")}<br>Остаток: ${fmtMoney(best.surplus)} ${escapeHtml(line.qty_unit || "уп")}</div>
     </div>`;
 }
 
@@ -889,11 +910,17 @@ function pinnedLineHtml(line, item) {
 }
 
 function resolvedLineHtml(line, item) {
-  return estimateLineHtml(line, item, line.relaxed ? '<span class="est-item-pin">близкое совпадение</span>' : '');
+  // Позиция посчитана, но подбор сомнительный (совпали не все слова или марки разные) —
+  // строка остаётся в итоге, а пометка зовёт проверить
+  const chip = line.relaxed ? '<span class="est-item-pin">близкое совпадение</span>'
+    : line.needs_review ? '<span class="est-item-pin" title="У найденных товаров разные названия — сверьте марку">проверьте подбор</span>'
+    : '';
+  return estimateLineHtml(line, item, chip);
 }
 
 function missingLineHtml(line, item) {
-  const text = line.status === 'unavailable'
+  const text = line.status === 'unit_mismatch' ? `Не удалось перевести в ${escapeHtml(line.qty_unit)} — у найденных товаров фасовка не указана: ${escapeHtml(line.query)}`
+    : line.status === 'unavailable'
     ? `Товар больше не продаётся: ${escapeHtml(line.query)}`
     : `Не найдено: ${escapeHtml(line.query)}`;
   return `<div class="est-line missing">
@@ -908,6 +935,7 @@ let estimateCalcSeq = 0;
 
 async function calcEstimate() {
   const seq = ++estimateCalcSeq;
+  window.lastEstimateData = null;
 
   if (!estimateList.length) {
     estimateResults.innerHTML = '<div class="results-card"><div class="empty">Список пуст — добавьте позиции через текстовое поле или кнопкой «+ в смету» на найденных товарах</div></div>';
@@ -923,7 +951,8 @@ async function calcEstimate() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         // Закреплённые товары тоже считает бэкенд — по актуальной цене из базы и с той же скидкой
-        items: estimateList.map(it => ({ query: it.query, qty: it.qty, url: it.url || null })),
+        items: estimateList.map(it => ({ query: it.query, qty: it.qty, qty_unit: it.qty_unit || "уп", url: it.url || null })),
+        delivery: window.getDelivery ? window.getDelivery() : {},
         discounts: discountsMap,
       }),
     });
@@ -939,6 +968,7 @@ async function calcEstimate() {
 
   // Бэкенд возвращает строки в том же порядке и с номером позиции, поэтому сопоставление
   // по тексту запроса (с очередью на случай дублей) больше не нужно.
+  window.lastEstimateData = data;
   const compositionRows = data.lines.map(line => {
     const item = estimateList[line.index];
     if (!item) return '';
@@ -950,14 +980,15 @@ async function calcEstimate() {
     <div class="summary-card">
       <span class="label">Итого по смете (${estimateList.length} поз.)</span>
       <span class="total heading num">${fmtMoney(data.optimal_total, 0)} ₽</span>
-      ${data.savings_vs_single_store > 0 ? `<span class="label">Экономия ${fmtMoney(data.savings_vs_single_store, 0)} ₽ по сравнению с покупкой всего (кроме выбранных вручную) в одном магазине</span>` : ''}
-      ${data.pinned_total > 0 ? `<span class="label">Из них ${fmtMoney(data.pinned_total, 0)} ₽ — товары, выбранные вручную (не участвуют в сравнении магазинов ниже)</span>` : ''}
+      ${data.savings_vs_single_store > 0 ? `<span class="label">Экономия с доставкой: ${fmtMoney(data.savings_vs_single_store)} ₽. Закреплённые товары сохраняют свой магазин</span>` : ''}
+      <span class="label">Товары: ${fmtMoney(data.goods_total)} ₽ · доставка: ${fmtMoney(data.delivery_total)} ₽</span>
+      ${data.pinned_total > 0 ? `<span class="label">Из них ${fmtMoney(data.pinned_total, 0)} ₽ — товары, выбранные вручную (включены во все варианты)</span>` : ''}
       ${data.unresolved.length ? `<span class="label">Не учтено позиций: ${data.unresolved.length}</span>` : ''}
     </div>`;
 
   const storeOptionsBlock = data.store_options.length ? `
     <div>
-      <div class="section-label" style="margin-bottom:10px;">Если покупать в одном магазине${data.pinned_total > 0 ? ' (без выбранных вручную)' : ''}</div>
+      <div class="section-label" style="margin-bottom:10px;">Варианты закупки с доставкой${data.pinned_total > 0 ? ' (закреплённые товары сохраняются)' : ''}</div>
       <div class="results-card">${data.store_options.map(o => `
         <div class="store-option">
           <span><span class="store-dot" style="background:${storeColor(o.store)}; display:inline-flex; margin-right:8px;">${escapeHtml(o.store[0])}</span>${escapeHtml(o.store)}${o.discount_percent > 0 ? ` <span class="discount-badge">−${o.discount_percent}%</span>` : ''}</span>
@@ -985,5 +1016,6 @@ estimateResults.addEventListener('click', (e) => {
   search();
 });
 </script>
+<script src="/static/features.js"></script>
 </body>
 </html>

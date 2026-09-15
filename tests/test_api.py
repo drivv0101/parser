@@ -318,12 +318,58 @@ class TestScrapeLock(unittest.TestCase):
         self.assertFalse(run_scrape.LOCK_PATH.exists())
 
 
+class TestEstimateUnitsAndDelivery(unittest.TestCase):
+    def test_quantity_in_kilograms_buys_whole_bags(self):
+        # 100 кг цемента = 2 мешка по 50 кг самого выгодного за килограмм
+        req = api.EstimateRequest(items=[api.EstimateItem(query="цемент", qty=100, qty_unit="кг")])
+        line = api.estimate(req)["lines"][0]
+        self.assertEqual(line["status"], "ok")
+        self.assertEqual(line["best"]["name"], "Цемент топки ПЦ-450 50кг")
+        self.assertEqual(line["best"]["packages"], 2)
+        self.assertEqual(line["best"]["line_total"], 1160.0)
+        self.assertEqual(line["best"]["surplus"], 0)
+
+    def test_different_brands_are_flagged_not_refused(self):
+        line = api.estimate(api.EstimateRequest(items=[api.EstimateItem(query="цемент", qty=1)]))["lines"][0]
+        self.assertEqual(line["status"], "ok")
+        self.assertTrue(line["needs_review"])
+
+    def test_delivery_cost_changes_store_choice(self):
+        items = [api.EstimateItem(query="цемент", qty=1)]
+        cheap = api.estimate(api.EstimateRequest(items=items))
+        self.assertEqual(cheap["lines"][0]["best"]["store_slug"], "stroymir")
+        # Доставка из Строймира дороже разницы в цене — выгоднее Алтерра
+        expensive = api.estimate(api.EstimateRequest(items=items, delivery={"stroymir": 5000, "alterra": 0}))
+        self.assertEqual(expensive["lines"][0]["best"]["store_slug"], "alterra")
+        self.assertEqual(expensive["delivery_total"], 0)
+
+    def test_xlsx_export_is_a_zip_with_text_cells(self):
+        from app.exporting import workbook
+
+        data = api.estimate(api.EstimateRequest(items=[api.EstimateItem(query="=цемент", qty=1)]))
+        blob = workbook(data)
+        self.assertTrue(blob.startswith(b"PK"))
+        import zipfile, io
+        with zipfile.ZipFile(io.BytesIO(blob)) as z:
+            sheet = z.read("xl/worksheets/sheet1.xml").decode()
+        self.assertIn('t="inlineStr"', sheet)   # текст остаётся текстом, "=цемент" не станет формулой
+
+
+class TestPriceHistory(unittest.TestCase):
+    def test_history_endpoint_returns_current_price_when_no_history(self):
+        url = api.search(q="цемент")["results"][0]["url"]
+        data = api.price_history(url=url)
+        self.assertEqual(len(data["history"]), 1)
+        self.assertTrue(data["active"])
+
+
 class TestParseLines(unittest.TestCase):
     def test_parse_lines_endpoint(self):
-        data = api.parse_lines(api.ParseLinesRequest(text="Цемент М500 - меш - 40\nУголок 50 х 50"))
+        data = api.parse_lines(api.ParseLinesRequest(text="Цемент М500 - меш - 40\nУголок 50 х 50\nГвозди - кг - 5"))
         self.assertEqual(data["items"], [
-            {"query": "Цемент М500", "qty": 40},
-            {"query": "Уголок 50 х 50", "qty": 1},
+            {"query": "Цемент М500", "qty": 40, "qty_unit": "уп", "needs_review": False},
+            {"query": "Уголок 50 х 50", "qty": 1, "qty_unit": "уп", "needs_review": False},
+            {"query": "Гвозди", "qty": 5, "qty_unit": "кг", "needs_review": False},
         ])
 
 

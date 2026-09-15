@@ -52,12 +52,20 @@ def _normalize_to_mm(value: float) -> float:
     return value * 1000 if value < _METERS_THRESHOLD else value
 
 
+def _dimension_side(match, group: int) -> float:
+    value = _to_float(match.group(group))
+    if re.search(r"(?:мм|mm)$", match.group(0).strip(), re.I):
+        return value
+    token = match.group(group)
+    return value * 1000 if value < 20 and ("," in token or "." in token) else value
+
+
 def extract_dimensions(text: str) -> Dimensions:
     match = _TRIPLE_RE.search(text)
     if match:
         return Dimensions(
-            length_mm=_normalize_to_mm(_to_float(match.group(1))),
-            width_mm=_normalize_to_mm(_to_float(match.group(2))),
+            length_mm=_dimension_side(match, 1),
+            width_mm=_dimension_side(match, 2),
             thickness_mm=_to_float(match.group(3)),
             raw_text=match.group(0).strip(),
         )
@@ -334,6 +342,27 @@ _QTY_X_RE = re.compile(r"^(.*?)\s[xх×](\d+(?:[.,]\d+)?)\s*$", re.IGNORECASE)
 class EstimateLine:
     query: str
     qty: float
+    qty_unit: str = "уп"
+    needs_review: bool = False
+
+
+def normalize_qty_unit(unit: str) -> tuple[str, float]:
+    unit = unit.lower().strip().rstrip(".").replace(" ", "")
+    if unit in {"кг", "л", "м", "м²", "м³"}:
+        return unit, 1
+    if unit in {"г", "гр"}:
+        return "кг", .001
+    if unit == "тн" or unit.startswith("тонн"):
+        return "кг", 1000
+    if unit == "мл":
+        return "л", .001
+    if unit in {"м2", "кв.м", "квм"}:
+        return "м²", 1
+    if unit in {"м3", "куб.м", "кубм"}:
+        return "м³", 1
+    if unit in {"мп", "пог.м", "погм"}:
+        return "м", 1
+    return "уп", 1
 
 
 def parse_estimate_line(line: str) -> EstimateLine | None:
@@ -343,14 +372,17 @@ def parse_estimate_line(line: str) -> EstimateLine | None:
 
     match = _QTY_X_RE.match(line)
     if match:
-        return EstimateLine(query=match.group(1).strip(), qty=_to_float(match.group(2)))
+        qty = _to_float(match.group(2))
+        return EstimateLine(query=match.group(1).strip(), qty=qty) if 0 < qty <= 1_000_000 else None
 
     match = _QTY_TAIL_RE.match(line)
     if match and (match.group(2) or match.group(4)):
         qty = _to_float(match.group(3))
         query = match.group(1).strip()
         if query and qty > 0:
-            return EstimateLine(query=query, qty=qty)
+            unit, factor = normalize_qty_unit(match.group(2) or match.group(4))
+            ambiguous = unit != "уп" and not match.group(2) and not re.search(r"[,;\t]|\s[-–—]\s", line)
+            return EstimateLine(query=query, qty=qty * factor, qty_unit=unit, needs_review=ambiguous)
 
     # количество не распознано — считаем 1 шт., в поиск уходит вся строка как есть
     return EstimateLine(query=line, qty=1)
@@ -359,3 +391,20 @@ def parse_estimate_line(line: str) -> EstimateLine | None:
 def parse_estimate_text(text: str) -> list[EstimateLine]:
     parsed = (parse_estimate_line(line) for line in (text or "").splitlines())
     return [line for line in parsed if line is not None and line.query]
+
+
+
+def material_signature(product) -> tuple:
+    """Conservative characteristics: different names require a user's choice.
+
+    Strip only size and package information. We do not guess that brands, grades
+    or coatings are interchangeable from a common keyword such as 'cement'.
+    """
+    name = product.name.lower().replace("ё", "е")
+    dims = extract_dimensions(name)
+    if dims.raw_text:
+        name = name.replace(dims.raw_text, " ")
+    for pattern, _, _, in _PACK_COMPILED:
+        name = pattern.sub(" ", name)
+    name = re.sub(r"[^\w]+", " ", name).strip()
+    return (" ".join(name.split()), product.length_mm, product.width_mm, product.thickness_mm)

@@ -57,3 +57,24 @@ class Product(Base):
     scraped_at: Mapped[datetime] = mapped_column(DateTime)
 
     store: Mapped["Store"] = relationship(back_populates="products")
+
+
+class PriceHistory(Base):
+    __tablename__ = "price_history"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    product_id: Mapped[int] = mapped_column(ForeignKey("products.id"), index=True)
+    price: Mapped[float] = mapped_column(Float)
+    recorded_at: Mapped[datetime] = mapped_column(DateTime)
+
+
+class ScrapeRun(Base):
+    __tablename__ = "scrape_runs"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    store_slug: Mapped[str] = mapped_column(String(50), index=True)
+    started_at: Mapped[datetime] = mapped_column(DateTime)
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    status: Mapped[str] = mapped_column(String(30), default="running")
+    completed_categories: Mapped[int] = mapped_column(Integer, default=0)
+    total_categories: Mapped[int] = mapped_column(Integer, default=0)
+    product_count: Mapped[int] = mapped_column(Integer, default=0)
+    message: Mapped[str | None] = mapped_column(String(2000), nullable=True)
